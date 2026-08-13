@@ -104,6 +104,10 @@ Private Sub CriarConfigPadrao()
     GravarCfg ws, "LARGURA_CUPOM", 80, "Largura da bobina: 58 ou 80"
     GravarCfg ws, "PASTA_PDF", ThisWorkbook.Path, "Pasta onde os PDFs sao salvos"
     GravarCfg ws, "FONTE_BARRAS", "Code 128", "Nome da fonte de codigo de barras instalada"
+    GravarCfg ws, "SENHA_ADMIN", "1234", "Senha para sair do modo sistema -- TROQUE ISSO"
+    GravarCfg ws, "PASTA_BACKUP", ThisWorkbook.Path & "\Backups", _
+        "Pasta da copia de seguranca automatica ao fechar. Aponte para uma " & _
+        "pasta sincronizada do Google Drive para computador para backup na nuvem"
     GravarCfg ws, "ULTIMO_ERRO", "", "Log do ultimo erro capturado"
 
     ws.Columns("A:C").AutoFit

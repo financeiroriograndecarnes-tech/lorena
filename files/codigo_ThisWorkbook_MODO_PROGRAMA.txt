@@ -98,7 +98,9 @@ Private Sub AlertasDoDia()
 End Sub
 
 '---------------------------------------------------------------------
-' Protege o fechamento com caixa aberto e garante a interface de volta.
+' Protege o fechamento com caixa aberto, garante a interface de volta,
+' salva e faz a copia de seguranca (local e/ou nuvem via Google Drive,
+' conforme bd_config > PASTA_BACKUP -- veja modBackup.bas).
 '---------------------------------------------------------------------
 Private Sub Workbook_BeforeClose(Cancel As Boolean)
     On Error Resume Next
@@ -113,4 +115,5 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     End If
     modSistema.RestaurarInterface
     ThisWorkbook.Save
+    modBackup.FazerBackup
 End Sub

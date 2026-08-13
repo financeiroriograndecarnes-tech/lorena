@@ -2,6 +2,7 @@ Option Explicit
 '=====================================================================
 ' ThisWorkbook | Rotina de inicializacao automatica
 ' COLE ESTE CODIGO no modulo "EstaPasta_de_trabalho" (ThisWorkbook)
+' Requer o modulo modSistema.bas importado (ModoPrograma / EncerrarSistema)
 '=====================================================================
 
 Private Sub Workbook_Open()
@@ -45,13 +46,20 @@ Private Sub Workbook_Open()
     '--- 5) alerta de contas vencidas ---
     AlertasDoDia
 
-    '--- 6) abre o menu principal ---
+    '--- 6) MODO PROGRAMA: esconde a interface do Excel ---
     Aba(SH_DASH).Activate
-    frmMenu.Show vbModeless
+    modSistema.ModoPrograma
+
+    '--- 7) o menu VIRA a janela do programa (modal, nao vbModeless) ---
+    frmMenu.Show
+
+    '--- 8) o menu foi fechado = o usuario saiu do sistema ---
+    modSistema.EncerrarSistema
     Exit Sub
 
 ErrorHandler:
     Application.ScreenUpdating = True
+    modSistema.RestaurarInterface     ' nunca deixar o Excel invisivel
     LogErro "ThisWorkbook.Workbook_Open", Err.Description
     MsgBox "Erro na inicializacao: " & Err.Description, vbCritical
 End Sub
@@ -90,11 +98,14 @@ Private Sub AlertasDoDia()
 End Sub
 
 '---------------------------------------------------------------------
-' Protege o fechamento com caixa aberto.
+' Protege o fechamento com caixa aberto, garante a interface de volta,
+' salva e faz a copia de seguranca (local e/ou nuvem via Google Drive,
+' conforme bd_config > PASTA_BACKUP -- veja modBackup.bas).
 '---------------------------------------------------------------------
 Private Sub Workbook_BeforeClose(Cancel As Boolean)
     On Error Resume Next
     If modCaixa.CaixaAberto() Then
+        Application.Visible = True
         If MsgBox("O caixa de hoje ainda esta ABERTO." & vbCrLf & _
                   "Deseja fechar o caixa antes de sair?", vbYesNo + vbExclamation) = vbYes Then
             Cancel = True
@@ -102,5 +113,7 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
             Exit Sub
         End If
     End If
+    modSistema.RestaurarInterface
     ThisWorkbook.Save
+    modBackup.FazerBackup
 End Sub
