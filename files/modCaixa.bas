@@ -5,25 +5,35 @@ Option Explicit
 '=====================================================================
 
 '---------------------------------------------------------------------
-' Verifica se existe ABERTURA sem FECHAMENTO na data informada.
+' O caixa esta aberto se o ULTIMO evento (Abertura/Fechamento) do dia,
+' em ordem cronologica, foi uma Abertura. Nao basta checar se existe
+' "alguma" abertura e "algum" fechamento no dia -- isso confundia o
+' sistema depois de um ciclo abrir/fechar/abrir de novo no mesmo dia,
+' fazendo a tela ficar presa em "CAIXA FECHADO" mesmo apos reabrir com
+' sucesso.
 '---------------------------------------------------------------------
 Public Function CaixaAberto(Optional ByVal dt As Date = 0) As Boolean
     Dim ws As Worksheet, i As Long, ult As Long
-    Dim abriu As Boolean, fechou As Boolean, d As Date
+    Dim d As Date, tipo As String, ultimoTipo As String, ultimaHora As Date
     On Error GoTo ErrorHandler
     If dt = 0 Then dt = Date
     Set ws = Aba(SH_CXA)
     ult = UltimaLinha(ws)
+    ultimoTipo = ""
+    ultimaHora = 0
     For i = 2 To ult
         d = ParaData(ws.Cells(i, X_DAT).Value)
         If Int(d) = Int(dt) Then
-            Select Case UCase$(ws.Cells(i, X_TIP).Value)
-                Case "ABERTURA":   abriu = True
-                Case "FECHAMENTO": fechou = True
-            End Select
+            tipo = UCase$(ws.Cells(i, X_TIP).Value)
+            If tipo = "ABERTURA" Or tipo = "FECHAMENTO" Then
+                If d >= ultimaHora Then
+                    ultimaHora = d
+                    ultimoTipo = tipo
+                End If
+            End If
         End If
     Next i
-    CaixaAberto = (abriu And Not fechou)
+    CaixaAberto = (ultimoTipo = "ABERTURA")
     Exit Function
 ErrorHandler:
     LogErro "modCaixa.CaixaAberto", Err.Description
