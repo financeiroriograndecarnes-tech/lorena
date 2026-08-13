@@ -146,8 +146,12 @@ Public Sub AtualizarStatusParcelas()
             venc = ParaData(ws.Cells(i, R_VCT).Value)
             If venc > 0 And venc < Date Then
                 ws.Cells(i, R_STA).Value = "Vencido"
-                ws.Cells(i, R_JUR).Value = CalcularEncargos( _
-                    Num(ws.Cells(i, R_VLR).Value) - Num(ws.Cells(i, R_PGO).Value), venc)
+                ' NAO gravar aqui o encargo calculado em R_JUR: esta coluna e o
+                ' historico do que foi REALMENTE cobrado (gravado por BaixarParcela).
+                ' Sobrescreve-la com uma previa a cada atualizacao fazia BaixarParcela
+                ' somar o encargo da baixa em cima dessa previa, cobrando o juros em
+                ' dobro no registro. O valor "se pago hoje" continua disponivel via
+                ' modFinanceiro.ValorDevido, usado na tela de recebimento.
             ElseIf Num(ws.Cells(i, R_PGO).Value) > 0 Then
                 ws.Cells(i, R_STA).Value = "Parcial"
             Else

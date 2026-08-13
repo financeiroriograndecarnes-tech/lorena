@@ -181,6 +181,8 @@ End Sub
 Public Sub CancelarVenda(ByVal idVenda As Long)
     Dim wsV As Worksheet, wsI As Worksheet, wsR As Worksheet
     Dim lin As Long, i As Long, ult As Long
+    Dim statusOriginal As String, fp1 As String, fp2 As String
+    Dim vp1 As Double, vp2 As Double, troco As Double
 
     On Error GoTo ErrorHandler
     If MsgBox("Confirma o CANCELAMENTO da venda #" & idVenda & "?" & vbCrLf & _
@@ -196,24 +198,43 @@ Public Sub CancelarVenda(ByVal idVenda As Long)
         MsgBox "Venda nao encontrada.", vbExclamation
         Exit Sub
     End If
-    If wsV.Cells(lin, V_STA).Value = ST_CANC Then
+    statusOriginal = CStr(wsV.Cells(lin, V_STA).Value)
+    If statusOriginal = ST_CANC Then
         Turbo False
         MsgBox "Esta venda ja esta cancelada.", vbInformation
         Exit Sub
     End If
 
-    '--- devolve estoque ---
-    ult = UltimaLinha(wsI)
-    For i = 2 To ult
-        If Num(wsI.Cells(i, I_ID).Value) = idVenda Then
-            modCadastros.MovimentarEstoque CStr(wsI.Cells(i, I_COD).Value), _
-                                           -Num(wsI.Cells(i, I_QTD).Value)
-        End If
-    Next i
+    '--- devolve estoque: so baixaram estoque as vendas Concluida/Consignado ---
+    If statusOriginal = ST_CONC Or statusOriginal = ST_CONS Then
+        ult = UltimaLinha(wsI)
+        For i = 2 To ult
+            If Num(wsI.Cells(i, I_ID).Value) = idVenda Then
+                modCadastros.MovimentarEstoque CStr(wsI.Cells(i, I_COD).Value), _
+                                               -Num(wsI.Cells(i, I_QTD).Value)
+            End If
+        Next i
+    End If
 
-    '--- estorna caixa ---
-    modCaixa.RegistrarMovimento "Estorno", -Num(wsV.Cells(lin, V_LIQ).Value), _
-        CStr(wsV.Cells(lin, V_FP1).Value), "Cancelamento da venda #" & idVenda
+    '--- estorna caixa: so a venda Concluida lancou movimento de caixa.
+    '    Estorna cada forma de pagamento separadamente (a venda pode ter sido
+    '    dividida em duas formas), espelhando exatamente o que foi gravado em
+    '    GravarVenda -- inclusive o troco descontado da forma em dinheiro.
+    If statusOriginal = ST_CONC Then
+        fp1 = CStr(wsV.Cells(lin, V_FP1).Value): vp1 = Num(wsV.Cells(lin, V_VP1).Value)
+        fp2 = CStr(wsV.Cells(lin, V_FP2).Value): vp2 = Num(wsV.Cells(lin, V_VP2).Value)
+        troco = Num(wsV.Cells(lin, V_TRO).Value)
+
+        If vp1 > 0 Then
+            modCaixa.RegistrarMovimento "Estorno", _
+                -IIf(UCase$(fp1) = "DINHEIRO", vp1 - troco, vp1), _
+                fp1, "Cancelamento da venda #" & idVenda
+        End If
+        If vp2 > 0 Then
+            modCaixa.RegistrarMovimento "Estorno", -vp2, fp2, _
+                "Cancelamento da venda #" & idVenda
+        End If
+    End If
 
     '--- remove parcelas em aberto (de tras pra frente) ---
     ult = UltimaLinha(wsR)
