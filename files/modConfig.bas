@@ -34,20 +34,17 @@ Public Const P_VAL As Long = 13    ' Validade
 Public Const P_FOT As Long = 14    ' Caminho da foto
 
 '--------------------- COLUNAS bd_clientes ---------------------------
-Public Const C_COD As Long = 1     ' Codigo
-Public Const C_DTC As Long = 2     ' Data de cadastro
-Public Const C_NOM As Long = 3     ' Nome / Razao Social
-Public Const C_DOC As Long = 4     ' CPF / CNPJ
-Public Const C_TEL As Long = 5     ' Telefone
-Public Const C_CEL As Long = 6     ' Celular
-Public Const C_LIM As Long = 7     ' Limite de credito
-Public Const C_STA As Long = 8     ' Status (Ativo / Bloqueado)
-Public Const C_PRZ As Long = 9     ' Permite a prazo (Sim / Nao)
-Public Const C_CEP As Long = 10
-Public Const C_END As Long = 11
-Public Const C_BAI As Long = 12
-Public Const C_CID As Long = 13
-Public Const C_UF  As Long = 14
+Public Const C_COD  As Long = 1     ' Codigo
+Public Const C_DTC  As Long = 2     ' Data de cadastro
+Public Const C_NOM  As Long = 3     ' Nome (aluno/cliente)
+Public Const C_RESP As Long = 4     ' Nome do Responsavel
+Public Const C_TEL  As Long = 5     ' Telefone
+Public Const C_CEL  As Long = 6     ' Celular
+Public Const C_LIM  As Long = 7     ' Limite de credito
+Public Const C_STA  As Long = 8     ' Status (Ativo / Bloqueado)
+Public Const C_PRZ  As Long = 9     ' Permite a prazo (Sim / Nao)
+Public Const C_TUR  As Long = 10    ' Turma
+Public Const C_TUT  As Long = 11    ' Tutor / Professor(a)
 
 '--------------------- COLUNAS bd_vendas -----------------------------
 Public Const V_ID  As Long = 1     ' IdVenda

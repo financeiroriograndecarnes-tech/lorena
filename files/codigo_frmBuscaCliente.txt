@@ -1,0 +1,102 @@
+Option Explicit
+'=====================================================================
+' frmBuscaCliente | Janela de selecao de cliente (usada pelo PDV e por
+' quem mais precisar escolher um cliente cadastrado, procurando por
+' nome, responsavel, turma ou celular).
+'
+' Uso:
+'   frmBuscaCliente.Show vbModal
+'   If frmBuscaCliente.Confirmado Then
+'       codigo = frmBuscaCliente.CodigoSelecionado
+'       nome = frmBuscaCliente.NomeSelecionado
+'   End If
+'   Unload frmBuscaCliente
+'=====================================================================
+
+Public Confirmado As Boolean
+Public CodigoSelecionado As Long
+Public NomeSelecionado As String
+
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    Confirmado = False
+    CarregarLista ""
+    Me.txtFiltro.SetFocus
+    Exit Sub
+ErrorHandler:
+    LogErro "frmBuscaCliente.Initialize", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Colunas: Codigo | Nome | Responsavel | Turma | Celular
+'---------------------------------------------------------------------
+Private Sub CarregarLista(ByVal filtro As String)
+    Dim ws As Worksheet, i As Long, ult As Long, n As Long, nome As String
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_CLI)
+    ult = UltimaLinha(ws)
+    Me.lstResultado.Clear
+    filtro = UCase$(Trim$(filtro))
+
+    For i = 2 To ult
+        nome = CStr(ws.Cells(i, C_NOM).Value)
+        If nome <> "" Then
+            If filtro = "" _
+               Or InStr(1, UCase$(nome), filtro) > 0 _
+               Or InStr(1, UCase$(CStr(ws.Cells(i, C_RESP).Value)), filtro) > 0 _
+               Or InStr(1, UCase$(CStr(ws.Cells(i, C_TUR).Value)), filtro) > 0 _
+               Or InStr(1, CStr(ws.Cells(i, C_CEL).Value), filtro) > 0 Then
+
+                Me.lstResultado.AddItem ws.Cells(i, C_COD).Value
+                Me.lstResultado.List(n, 1) = nome
+                Me.lstResultado.List(n, 2) = ws.Cells(i, C_RESP).Value
+                Me.lstResultado.List(n, 3) = ws.Cells(i, C_TUR).Value
+                Me.lstResultado.List(n, 4) = ws.Cells(i, C_CEL).Value
+                n = n + 1
+            End If
+        End If
+    Next i
+    Exit Sub
+ErrorHandler:
+    LogErro "frmBuscaCliente.CarregarLista", Err.Description
+End Sub
+
+Private Sub txtFiltro_Change()
+    CarregarLista CStr(Me.txtFiltro.Value)
+End Sub
+
+Private Sub lstResultado_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    Confirmar
+End Sub
+
+Private Sub cmdSelecionar_Click()
+    Confirmar
+End Sub
+
+Private Sub Confirmar()
+    On Error GoTo ErrorHandler
+    If Me.lstResultado.ListIndex < 0 Then
+        MsgBox "Selecione um cliente na lista.", vbExclamation
+        Exit Sub
+    End If
+    CodigoSelecionado = CLng(Num(Me.lstResultado.List(Me.lstResultado.ListIndex, 0)))
+    NomeSelecionado = CStr(Me.lstResultado.List(Me.lstResultado.ListIndex, 1))
+    Confirmado = True
+    Me.Hide
+    Exit Sub
+ErrorHandler:
+    LogErro "frmBuscaCliente.Confirmar", Err.Description
+End Sub
+
+Private Sub cmdCancelar_Click()
+    Confirmado = False
+    Me.Hide
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    If CloseMode = 0 Then
+        Confirmado = False
+        Cancel = True
+        Me.Hide
+    End If
+End Sub

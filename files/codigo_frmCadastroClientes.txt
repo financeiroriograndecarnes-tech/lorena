@@ -2,7 +2,6 @@ Option Explicit
 '=====================================================================
 ' frmCadastroClientes | Salvar, Editar, Excluir, Pesquisar, Limpar
 ' + validacao de limite de credito e trava de bloqueio
-' + consulta de endereco por CEP (API ViaCEP)
 '=====================================================================
 
 Private mLinhaAtual As Long        ' linha do registro carregado (0 = novo)
@@ -38,7 +37,8 @@ Private Sub CarregarLista_Clientes(ByVal filtro As String)
         If nome <> "" Then
             If filtro = "" _
                Or InStr(1, UCase$(nome), filtro) > 0 _
-               Or InStr(1, CStr(ws.Cells(i, C_DOC).Value), filtro) > 0 _
+               Or InStr(1, UCase$(CStr(ws.Cells(i, C_RESP).Value)), filtro) > 0 _
+               Or InStr(1, UCase$(CStr(ws.Cells(i, C_TUR).Value)), filtro) > 0 _
                Or InStr(1, CStr(ws.Cells(i, C_CEL).Value), filtro) > 0 Then
 
                 Me.lstClientes.AddItem ws.Cells(i, C_COD).Value
@@ -75,17 +75,14 @@ Private Sub CarregarRegistro(ByVal lin As Long)
 
     Me.txtCodigo.Value = ws.Cells(lin, C_COD).Value
     Me.txtNome.Value = ws.Cells(lin, C_NOM).Value
-    Me.txtCpfCnpj.Value = ws.Cells(lin, C_DOC).Value
+    Me.txtResponsavel.Value = ws.Cells(lin, C_RESP).Value
+    Me.txtTutor.Value = ws.Cells(lin, C_TUT).Value
     Me.txtTelefone.Value = ws.Cells(lin, C_TEL).Value
     Me.txtCelular.Value = ws.Cells(lin, C_CEL).Value
     Me.txtLimite.Value = Format$(Num(ws.Cells(lin, C_LIM).Value), "#,##0.00")
     Me.cboStatus.Value = ws.Cells(lin, C_STA).Value
     Me.cboAPrazo.Value = ws.Cells(lin, C_PRZ).Value
-    Me.txtCEP.Value = ws.Cells(lin, C_CEP).Value
-    Me.txtEndereco.Value = ws.Cells(lin, C_END).Value
-    Me.txtBairro.Value = ws.Cells(lin, C_BAI).Value
-    Me.txtCidade.Value = ws.Cells(lin, C_CID).Value
-    Me.txtUF.Value = ws.Cells(lin, C_UF).Value
+    Me.txtTurma.Value = ws.Cells(lin, C_TUR).Value
 
     MostrarSituacaoFinanceira CStr(ws.Cells(lin, C_NOM).Value)
     Exit Sub
@@ -149,10 +146,7 @@ Private Sub cmdSalvar_Click()
 
     '--- validacoes ---
     If Trim$(Me.txtNome.Value) = "" Then
-        MsgBox "Informe o nome / razao social.", vbExclamation: Me.txtNome.SetFocus: Exit Sub
-    End If
-    If Not modCEP.ValidarCpfCnpj(CStr(Me.txtCpfCnpj.Value)) Then
-        If MsgBox("CPF/CNPJ invalido. Salvar mesmo assim?", vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+        MsgBox "Informe o nome.", vbExclamation: Me.txtNome.SetFocus: Exit Sub
     End If
     If Num(Me.txtLimite.Value) < 0 Then
         MsgBox "Limite de credito nao pode ser negativo.", vbExclamation: Exit Sub
@@ -174,17 +168,14 @@ Private Sub cmdSalvar_Click()
     End If
 
     ws.Cells(lin, C_NOM).Value = Trim$(Me.txtNome.Value)
-    ws.Cells(lin, C_DOC).Value = "'" & modCEP.SomenteNumeros(CStr(Me.txtCpfCnpj.Value))
+    ws.Cells(lin, C_RESP).Value = Trim$(Me.txtResponsavel.Value)
+    ws.Cells(lin, C_TUT).Value = Trim$(Me.txtTutor.Value)
     ws.Cells(lin, C_TEL).Value = Me.txtTelefone.Value
     ws.Cells(lin, C_CEL).Value = Me.txtCelular.Value
     ws.Cells(lin, C_LIM).Value = Num(Me.txtLimite.Value)
     ws.Cells(lin, C_STA).Value = Txt(Me.cboStatus.Value)
     ws.Cells(lin, C_PRZ).Value = Txt(Me.cboAPrazo.Value)
-    ws.Cells(lin, C_CEP).Value = "'" & modCEP.FormatarCEP(CStr(Me.txtCEP.Value))
-    ws.Cells(lin, C_END).Value = Me.txtEndereco.Value
-    ws.Cells(lin, C_BAI).Value = Me.txtBairro.Value
-    ws.Cells(lin, C_CID).Value = Me.txtCidade.Value
-    ws.Cells(lin, C_UF).Value = UCase$(Me.txtUF.Value)
+    ws.Cells(lin, C_TUR).Value = Trim$(Me.txtTurma.Value)
 
     Turbo False
     MsgBox "Cliente salvo com sucesso.", vbInformation
@@ -228,41 +219,6 @@ End Sub
 
 Private Sub txtPesquisa_Change()
     CarregarLista_Clientes CStr(Me.txtPesquisa.Value)
-End Sub
-
-'=====================================================================
-' CEP - API ViaCEP
-'=====================================================================
-Private Sub cmdBuscarCEP_Click()
-    BuscarCEP
-End Sub
-
-Private Sub txtCEP_Exit(ByVal Cancel As MSForms.ReturnBoolean)
-    If Len(modCEP.SomenteNumeros(CStr(Me.txtCEP.Value))) = 8 Then BuscarCEP
-End Sub
-
-Private Sub BuscarCEP()
-    Dim e As Endereco
-    On Error GoTo ErrorHandler
-    Me.MousePointer = 11                       ' ampulheta
-    e = modCEP.ConsultarCEP(CStr(Me.txtCEP.Value))
-    Me.MousePointer = 0
-
-    If Not e.Sucesso Then
-        MsgBox e.erro, vbExclamation, "Consulta de CEP"
-        Exit Sub
-    End If
-
-    Me.txtEndereco.Value = e.logradouro
-    Me.txtBairro.Value = e.bairro
-    Me.txtCidade.Value = e.cidade
-    Me.txtUF.Value = e.UF
-    Me.txtCEP.Value = modCEP.FormatarCEP(Txt(Me.txtCEP.Value))
-    Me.txtEndereco.SetFocus
-    Exit Sub
-ErrorHandler:
-    Me.MousePointer = 0
-    LogErro "frmCadastroClientes.BuscarCEP", Err.Description
 End Sub
 
 '=====================================================================

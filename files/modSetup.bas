@@ -13,9 +13,9 @@ Public Sub CriarEstrutura()
         "Preco Custo", "Margem %", "Preco Varejo", "Preco Atacado", "Preco Cartao", _
         "Estoque Atual", "Estoque Minimo", "Fornecedor", "Validade", "Foto")
 
-    CriarAba SH_CLI, Array("Codigo", "Data Cadastro", "Nome/Razao Social", "CPF/CNPJ", _
+    CriarAba SH_CLI, Array("Codigo", "Data Cadastro", "Nome", "Responsavel", _
         "Telefone", "Celular", "Limite Credito", "Status", "Permite A Prazo", _
-        "CEP", "Endereco", "Bairro", "Cidade", "UF")
+        "Turma", "Tutor/Professor")
 
     CriarAba SH_VEN, Array("IdVenda", "Data", "Hora", "Cliente", "Vendedor", _
         "Total Bruto", "Desconto", "Total Liquido", "Forma Pagamento 1", "Valor Pag 1", _
@@ -146,9 +146,7 @@ Private Sub FormatarColunas()
     With Aba(SH_CLI)
         .Columns(C_DTC).NumberFormat = "dd/mm/yyyy"
         .Columns(C_LIM).NumberFormat = "R$ #,##0.00"
-        .Columns(C_DOC).NumberFormat = "@"
-        .Columns(C_CEP).NumberFormat = "@"
-        .Columns("A:N").AutoFit
+        .Columns("A:K").AutoFit
     End With
     With Aba(SH_VEN)
         .Columns(V_DAT).NumberFormat = "dd/mm/yyyy"

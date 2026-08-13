@@ -27,6 +27,7 @@ Private Sub UserForm_Initialize()
     Me.cboPag1.ListIndex = 0
     Me.cboTipoDesconto.ListIndex = 0
     Me.txtQtd.Value = "1"
+    Me.txtClienteCod.Value = ""
     Me.txtCliente.Value = "CONSUMIDOR"
     Me.txtVendedor.Value = IIf(gUsuario = "", CStr(Cfg("USUARIO_PADRAO", "OPERADOR")), gUsuario)
     Me.txtParcelas.Value = "1"
@@ -313,6 +314,7 @@ Private Sub LimparVenda()
     Me.txtValorPag1.Value = ""
     Me.txtValorPag2.Value = ""
     Me.cboPag2.ListIndex = -1
+    Me.txtClienteCod.Value = ""
     Me.txtCliente.Value = "CONSUMIDOR"
     Me.txtCodigo.Value = ""
     Me.txtQtd.Value = "1"
@@ -325,28 +327,57 @@ End Sub
 
 '=====================================================================
 ' CLIENTE
+' Identificacao principal: NUMERO de cadastro (txtClienteCod), com o
+' nome aparecendo automaticamente ao lado (txtCliente). O botao "..."
+' abre uma lista de selecao (frmBuscaCliente) para quando nao se sabe
+' o numero de cor -- procura por nome, responsavel, turma ou celular.
 '=====================================================================
-Private Sub cmdBuscarCliente_Click()
-    Dim busca As String, ws As Worksheet, i As Long, ult As Long, achou As Boolean
+Private Sub txtClienteCod_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    BuscarClientePorCodigo
+End Sub
+
+Private Sub txtClienteCod_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = vbKeyReturn Then
+        KeyCode = 0
+        BuscarClientePorCodigo
+        Me.txtCodigo.SetFocus
+    End If
+End Sub
+
+'---------------------------------------------------------------------
+' Resolve o numero digitado em txtClienteCod para o nome do cliente.
+'---------------------------------------------------------------------
+Private Sub BuscarClientePorCodigo()
+    Dim ws As Worksheet, lin As Long, cod As String
     On Error GoTo ErrorHandler
-    busca = InputBox("Digite parte do nome do cliente:", "Buscar cliente")
-    If busca = "" Then Exit Sub
+    cod = Trim$(Me.txtClienteCod.Value)
+    If cod = "" Then Exit Sub
 
     Set ws = Aba(SH_CLI)
-    ult = UltimaLinha(ws)
-    For i = 2 To ult
-        If InStr(1, UCase$(CStr(ws.Cells(i, C_NOM).Value)), UCase$(busca)) > 0 Then
-            If MsgBox("Usar o cliente: " & ws.Cells(i, C_NOM).Value & "?" & vbCrLf & _
-                      "Credito disponivel: " & _
-                      Moeda(modCadastros.CreditoDisponivel(CStr(ws.Cells(i, C_NOM).Value))), _
-                      vbYesNo + vbQuestion) = vbYes Then
-                Me.txtCliente.Value = ws.Cells(i, C_NOM).Value
-                achou = True
-                Exit For
-            End If
-        End If
-    Next i
-    If Not achou Then MsgBox "Nenhum cliente selecionado.", vbInformation
+    lin = LocalizarLinha(ws, C_COD, CLng(Num(cod)))
+    If lin = 0 Then
+        MsgBox "Cliente numero " & cod & " nao encontrado.", vbExclamation, "PDV"
+        Me.txtClienteCod.SetFocus
+        Exit Sub
+    End If
+    Me.txtCliente.Value = ws.Cells(lin, C_NOM).Value
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.BuscarClientePorCodigo", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Abre a lista de selecao de clientes (para quando nao se sabe o numero).
+'---------------------------------------------------------------------
+Private Sub cmdBuscarCliente_Click()
+    On Error GoTo ErrorHandler
+    frmBuscaCliente.Show vbModal
+    If frmBuscaCliente.Confirmado Then
+        Me.txtClienteCod.Value = frmBuscaCliente.CodigoSelecionado
+        Me.txtCliente.Value = frmBuscaCliente.NomeSelecionado
+    End If
+    Unload frmBuscaCliente
+    Me.txtCodigo.SetFocus
     Exit Sub
 ErrorHandler:
     LogErro "frmPDV.cmdBuscarCliente", Err.Description

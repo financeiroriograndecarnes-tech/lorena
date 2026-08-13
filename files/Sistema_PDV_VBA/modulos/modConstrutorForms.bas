@@ -1,7 +1,7 @@
 Attribute VB_Name = "modConstrutorForms"
 Option Explicit
 '=====================================================================
-' modConstrutorForms | Cria automaticamente os 7 UserForms do sistema
+' modConstrutorForms | Cria automaticamente os 8 UserForms do sistema
 '
 ' PRE-REQUISITO (uma unica vez):
 '   Arquivo > Opcoes > Central de Confiabilidade > Configuracoes da
@@ -34,6 +34,7 @@ Public Sub ConstruirTodosOsFormularios()
 
     ConstruirMenu
     ConstruirClientes
+    ConstruirBuscaCliente
     ConstruirProdutos
     ConstruirPDV
     ConstruirCaixa
@@ -172,50 +173,43 @@ End Sub
 '=====================================================================
 Private Sub ConstruirClientes()
     Dim vbc As Object, d As Object, c As Object
-    Set vbc = NovoForm("frmCadastroClientes", "Cadastro de Clientes", 720, 400)
+    Set vbc = NovoForm("frmCadastroClientes", "Cadastro de Clientes", 720, 330)
     If vbc Is Nothing Then Exit Sub
     Set d = vbc.Designer
 
     Lbl d, "lb1", "Codigo:", 15, 20
     Ctl d, T_TXT, "txtCodigo", 80, 18, 60, 18
-    Lbl d, "lb2", "Nome/Razao:", 15, 45
+    Lbl d, "lb2", "Nome:", 15, 45
     Ctl d, T_TXT, "txtNome", 80, 43, 285, 18
-    Lbl d, "lb3", "CPF/CNPJ:", 15, 70
-    Ctl d, T_TXT, "txtCpfCnpj", 80, 68, 140, 18
-    Lbl d, "lb4", "Telefone:", 15, 95
-    Ctl d, T_TXT, "txtTelefone", 80, 93, 120, 18
-    Lbl d, "lb5", "Celular:", 210, 95, 50
-    Ctl d, T_TXT, "txtCelular", 265, 93, 100, 18
-    Lbl d, "lb6", "Limite R$:", 15, 120
-    Ctl d, T_TXT, "txtLimite", 80, 118, 90, 18
-    Lbl d, "lb7", "Status:", 180, 120, 45
-    Ctl d, T_CBO, "cboStatus", 230, 118, 90, 20
-    Lbl d, "lb8", "A prazo:", 15, 145
-    Ctl d, T_CBO, "cboAPrazo", 80, 143, 70, 20
-    Ctl d, T_LBL, "lblSaldo", 165, 145, 200, 16, "Saldo devedor: R$ 0,00"
+    Lbl d, "lb3", "Responsavel:", 15, 70
+    Ctl d, T_TXT, "txtResponsavel", 80, 68, 285, 18
+    Lbl d, "lb15", "Tutor/Professor(a):", 15, 95, 90
+    Ctl d, T_TXT, "txtTutor", 110, 93, 255, 18
+    Lbl d, "lb4", "Telefone:", 15, 120
+    Ctl d, T_TXT, "txtTelefone", 80, 118, 120, 18
+    Lbl d, "lb5", "Celular:", 210, 120, 50
+    Ctl d, T_TXT, "txtCelular", 265, 118, 100, 18
+    Lbl d, "lb6", "Limite R$:", 15, 145
+    Ctl d, T_TXT, "txtLimite", 80, 143, 90, 18
+    Lbl d, "lb7", "Status:", 180, 145, 45
+    Ctl d, T_CBO, "cboStatus", 230, 143, 90, 20
+    Lbl d, "lb8", "A prazo:", 15, 170
+    Ctl d, T_CBO, "cboAPrazo", 80, 168, 70, 20
+    Ctl d, T_LBL, "lblSaldo", 165, 170, 200, 16, "Saldo devedor: R$ 0,00"
 
-    Lbl d, "lb9", "CEP:", 15, 175
-    Ctl d, T_TXT, "txtCEP", 80, 173, 80, 18
-    Ctl d, T_CMD, "cmdBuscarCEP", 165, 171, 70, 22, "Buscar CEP"
-    Lbl d, "lb10", "Endereco:", 15, 200
-    Ctl d, T_TXT, "txtEndereco", 80, 198, 285, 18
-    Lbl d, "lb11", "Bairro:", 15, 225
-    Ctl d, T_TXT, "txtBairro", 80, 223, 160, 18
-    Lbl d, "lb12", "Cidade:", 15, 250
-    Ctl d, T_TXT, "txtCidade", 80, 248, 160, 18
-    Lbl d, "lb13", "UF:", 250, 250, 25
-    Ctl d, T_TXT, "txtUF", 275, 248, 40, 18
+    Lbl d, "lb10", "Turma:", 15, 195
+    Ctl d, T_TXT, "txtTurma", 80, 193, 200, 18
 
-    Ctl d, T_CMD, "cmdNovo", 15, 285, 80, 26, "Novo"
-    Ctl d, T_CMD, "cmdSalvar", 100, 285, 80, 26, "Salvar"
-    Ctl d, T_CMD, "cmdExcluir", 185, 285, 80, 26, "Excluir"
-    Ctl d, T_CMD, "cmdLimpar", 270, 285, 80, 26, "Limpar"
-    Ctl d, T_CMD, "cmdFechar", 355, 285, 80, 26, "Fechar"
+    Ctl d, T_CMD, "cmdNovo", 15, 230, 80, 26, "Novo"
+    Ctl d, T_CMD, "cmdSalvar", 100, 230, 80, 26, "Salvar"
+    Ctl d, T_CMD, "cmdExcluir", 185, 230, 80, 26, "Excluir"
+    Ctl d, T_CMD, "cmdLimpar", 270, 230, 80, 26, "Limpar"
+    Ctl d, T_CMD, "cmdFechar", 355, 230, 80, 26, "Fechar"
 
     Lbl d, "lb14", "Pesquisar:", 385, 20, 60
     Ctl d, T_TXT, "txtPesquisa", 445, 18, 180, 18
     Ctl d, T_CMD, "cmdPesquisar", 630, 16, 65, 22, "Buscar"
-    Set c = Ctl(d, T_LST, "lstClientes", 385, 45, 310, 230)
+    Set c = Ctl(d, T_LST, "lstClientes", 385, 45, 310, 205)
     On Error Resume Next
     c.ColumnCount = 6
     c.ColumnWidths = "35;120;70;45;40;0"
@@ -223,6 +217,31 @@ Private Sub ConstruirClientes()
     On Error GoTo 0
 
     Codigo vbc, "frmCadastroClientes"
+End Sub
+
+'=====================================================================
+' 2b) BUSCA DE CLIENTE (janela de selecao reutilizavel)
+'=====================================================================
+Private Sub ConstruirBuscaCliente()
+    Dim vbc As Object, d As Object, c As Object
+    Set vbc = NovoForm("frmBuscaCliente", "Buscar Cliente", 480, 360)
+    If vbc Is Nothing Then Exit Sub
+    Set d = vbc.Designer
+
+    Lbl d, "lc1", "Pesquisar (nome, responsavel, turma ou celular):", 15, 12, 260
+    Ctl d, T_TXT, "txtFiltro", 15, 30, 445, 20
+
+    Set c = Ctl(d, T_LST, "lstResultado", 15, 56, 445, 245)
+    On Error Resume Next
+    c.ColumnCount = 6
+    c.ColumnWidths = "40;120;110;70;70;0"
+    c.ColumnHeads = False
+    On Error GoTo 0
+
+    Ctl d, T_CMD, "cmdSelecionar", 15, 310, 130, 28, "Selecionar"
+    Ctl d, T_CMD, "cmdCancelar", 155, 310, 100, 28, "Cancelar"
+
+    Codigo vbc, "frmBuscaCliente"
 End Sub
 
 '=====================================================================
@@ -310,9 +329,10 @@ Private Sub ConstruirPDV()
 
     Lbl d, "lv3", "Tabela:", 15, 44, 45
     Ctl d, T_CBO, "cboTipoVenda", 62, 42, 110, 20
-    Lbl d, "lv4", "Cliente:", 185, 44, 45
-    Ctl d, T_TXT, "txtCliente", 232, 42, 180, 20
-    Ctl d, T_CMD, "cmdBuscarCliente", 415, 40, 30, 24, "..."
+    Lbl d, "lv4", "Cliente no:", 185, 44, 55
+    Ctl d, T_TXT, "txtClienteCod", 243, 42, 50, 20
+    Ctl d, T_TXT, "txtCliente", 298, 42, 180, 20
+    Ctl d, T_CMD, "cmdBuscarCliente", 481, 40, 30, 24, "..."
     Lbl d, "lv5", "Vendedor:", 15, 68, 55
     Ctl d, T_TXT, "txtVendedor", 72, 66, 130, 20
 

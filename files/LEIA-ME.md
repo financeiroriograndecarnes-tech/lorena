@@ -3,11 +3,11 @@
 ## 1. Ordem de instalação
 
 1. Abra o Excel → novo arquivo → **Salvar como `.xlsm`** (Pasta de Trabalho Habilitada para Macro).
-2. `Alt + F11` → menu **Arquivo → Importar Arquivo** → importe os 11 arquivos da pasta `modulos/` com extensão `.bas`.
+2. `Alt + F11` → menu **Arquivo → Importar Arquivo** → importe todos os arquivos `.bas` da pasta `modulos/` (13 no total).
 3. No Explorador de Projetos, duplo-clique em **EstaPasta_de_trabalho** e cole o conteúdo de `modulos/codigo_ThisWorkbook.txt`.
 4. Volte ao Excel → `Alt + F8` → execute **`CriarEstrutura`**. Isso cria todas as abas do banco com cabeçalhos e formatos.
 5. Habilite: **Arquivo → Opções → Central de Confiabilidade → Configurações da Central de Confiabilidade → Configurações de Macro → [x] Confiar no acesso ao modelo de objeto do projeto do VBA**.
-6. `Alt + F8` → execute **`ConstruirTodosOsFormularios`** → aponte para a pasta `formularios/`. Os 7 UserForms são criados com todos os controles e o código já injetado.
+6. `Alt + F8` → execute **`ConstruirTodosOsFormularios`** → aponte para a pasta `formularios/`. Os 8 UserForms são criados com todos os controles e o código já injetado.
 7. Salve e reabra. O `Workbook_Open` verifica a estrutura, pede o operador, checa se o caixa do dia está aberto e abre o menu.
 
 > Se preferir não liberar o acesso ao projeto VBA, crie os UserForms manualmente com os nomes de controle exatos que estão em `modConstrutorForms.bas` e cole o código dos arquivos `codigo_frmXXX.txt`.
@@ -50,7 +50,7 @@
 | N | Foto | caminho do arquivo |
 
 ### bd_clientes
-`A Codigo · B Data Cadastro · C Nome/Razao Social · D CPF/CNPJ · E Telefone · F Celular · G Limite Credito · H Status · I Permite A Prazo · J CEP · K Endereco · L Bairro · M Cidade · N UF`
+`A Codigo · B Data Cadastro · C Nome · D Responsavel · E Telefone · F Celular · G Limite Credito · H Status · I Permite A Prazo · J Turma · K Tutor/Professor`
 
 ### bd_vendas
 `A IdVenda · B Data · C Hora · D Cliente · E Vendedor · F Total Bruto · G Desconto · H Total Liquido · I Forma Pagamento 1 · J Valor Pag 1 · K Forma Pagamento 2 · L Valor Pag 2 · M Troco · N Status · O Tabela Preco* · P Observacao*`
@@ -109,6 +109,7 @@ Tipos gravados: `Abertura`, `Sangria`, `Suprimento`, `Fechamento`, `Venda`, `Rec
 - **Impressão térmica**: a saída vai pela impressora padrão do Windows com fonte Courier New e margens mínimas. Configure a bobina no driver da impressora (58 mm ou 80 mm) antes do primeiro uso.
 - **Volume**: como o banco é planilha, o desempenho começa a cair acima de ~50 mil linhas em `bd_itens_venda`. A partir daí vale migrar o back-end para SQLite ou Access mantendo os mesmos módulos.
 - **Multiusuário**: arquivo Excel não suporta dois PDVs gravando ao mesmo tempo. Para duas frentes de caixa é preciso um banco externo.
+- **Cliente no PDV**: o campo principal é o *número* de cadastro do cliente (`txtClienteCod`); ao sair do campo (ou Enter), o nome aparece automaticamente ao lado. O botão **"..."** abre `frmBuscaCliente`, uma lista de seleção que procura por nome, responsável, turma ou celular — útil quando não se sabe o número de cor. Por baixo dos panos a venda continua sendo gravada pelo *nome* (compatível com todo o resto do sistema); o número é só um atalho de digitação.
 
 ## 7. Backup automático e cópia na nuvem (Google Drive)
 

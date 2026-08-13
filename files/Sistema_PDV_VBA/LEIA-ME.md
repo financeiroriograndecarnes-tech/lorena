@@ -3,11 +3,11 @@
 ## 1. Ordem de instalação
 
 1. Abra o Excel → novo arquivo → **Salvar como `.xlsm`** (Pasta de Trabalho Habilitada para Macro).
-2. `Alt + F11` → menu **Arquivo → Importar Arquivo** → importe os 11 arquivos da pasta `modulos/` com extensão `.bas`.
+2. `Alt + F11` → menu **Arquivo → Importar Arquivo** → importe todos os arquivos `.bas` da pasta `modulos/` (13 no total).
 3. No Explorador de Projetos, duplo-clique em **EstaPasta_de_trabalho** e cole o conteúdo de `modulos/codigo_ThisWorkbook.txt`.
 4. Volte ao Excel → `Alt + F8` → execute **`CriarEstrutura`**. Isso cria todas as abas do banco com cabeçalhos e formatos.
 5. Habilite: **Arquivo → Opções → Central de Confiabilidade → Configurações da Central de Confiabilidade → Configurações de Macro → [x] Confiar no acesso ao modelo de objeto do projeto do VBA**.
-6. `Alt + F8` → execute **`ConstruirTodosOsFormularios`** → aponte para a pasta `formularios/`. Os 7 UserForms são criados com todos os controles e o código já injetado.
+6. `Alt + F8` → execute **`ConstruirTodosOsFormularios`** → aponte para a pasta `formularios/`. Os 8 UserForms são criados com todos os controles e o código já injetado.
 7. Salve e reabra. O `Workbook_Open` verifica a estrutura, pede o operador, checa se o caixa do dia está aberto e abre o menu.
 
 > Se preferir não liberar o acesso ao projeto VBA, crie os UserForms manualmente com os nomes de controle exatos que estão em `modConstrutorForms.bas` e cole o código dos arquivos `codigo_frmXXX.txt`.
@@ -26,6 +26,8 @@
 | `LARGURA_CUPOM` | `58` ou `80` (bobina térmica) |
 | `PASTA_PDF` | Onde os PDFs de cupom e carnê são salvos |
 | `FONTE_BARRAS` | Nome da fonte Code 128 instalada no Windows |
+| `SENHA_ADMIN` | Senha para sair do "modo sistema" (`Ctrl+Shift+F12`). Troque o padrão `1234` assim que possível |
+| `PASTA_BACKUP` | Pasta onde a cópia de segurança automática é salva ao fechar o sistema. Aponte para uma pasta sincronizada do **Google Drive para computador** para ter backup na nuvem sem nenhuma integração de API — veja a seção 7 |
 
 ## 3. Estrutura das tabelas
 
@@ -48,7 +50,7 @@
 | N | Foto | caminho do arquivo |
 
 ### bd_clientes
-`A Codigo · B Data Cadastro · C Nome/Razao Social · D CPF/CNPJ · E Telefone · F Celular · G Limite Credito · H Status · I Permite A Prazo · J CEP · K Endereco · L Bairro · M Cidade · N UF`
+`A Codigo · B Data Cadastro · C Nome · D Responsavel · E Telefone · F Celular · G Limite Credito · H Status · I Permite A Prazo · J Turma · K Tutor/Professor`
 
 ### bd_vendas
 `A IdVenda · B Data · C Hora · D Cliente · E Vendedor · F Total Bruto · G Desconto · H Total Liquido · I Forma Pagamento 1 · J Valor Pag 1 · K Forma Pagamento 2 · L Valor Pag 2 · M Troco · N Status · O Tabela Preco* · P Observacao*`
@@ -89,6 +91,8 @@ Tipos gravados: `Abertura`, `Sangria`, `Suprimento`, `Fechamento`, `Venda`, `Rec
 | `modImpressao.bas` | Cupom 58/80 mm, PDF A4, carnê/promissória, etiquetas Code 128 |
 | `modCEP.bas` | ViaCEP + validação de CPF/CNPJ |
 | `modConstrutorForms.bas` | Cria os 7 UserForms automaticamente |
+| `modSistema.bas` | Modo aplicativo (esconde a interface do Excel), login de saída com `SENHA_ADMIN` |
+| `modBackup.bas` | Cópia de segurança automática ao fechar (`PASTA_BACKUP`), com rotação das mais antigas |
 
 ## 5. Regras de negócio implementadas
 
@@ -105,3 +109,18 @@ Tipos gravados: `Abertura`, `Sangria`, `Suprimento`, `Fechamento`, `Venda`, `Rec
 - **Impressão térmica**: a saída vai pela impressora padrão do Windows com fonte Courier New e margens mínimas. Configure a bobina no driver da impressora (58 mm ou 80 mm) antes do primeiro uso.
 - **Volume**: como o banco é planilha, o desempenho começa a cair acima de ~50 mil linhas em `bd_itens_venda`. A partir daí vale migrar o back-end para SQLite ou Access mantendo os mesmos módulos.
 - **Multiusuário**: arquivo Excel não suporta dois PDVs gravando ao mesmo tempo. Para duas frentes de caixa é preciso um banco externo.
+- **Cliente no PDV**: o campo principal é o *número* de cadastro do cliente (`txtClienteCod`); ao sair do campo (ou Enter), o nome aparece automaticamente ao lado. O botão **"..."** abre `frmBuscaCliente`, uma lista de seleção que procura por nome, responsável, turma ou celular — útil quando não se sabe o número de cor. Por baixo dos panos a venda continua sendo gravada pelo *nome* (compatível com todo o resto do sistema); o número é só um atalho de digitação.
+
+## 7. Backup automático e cópia na nuvem (Google Drive)
+
+Toda vez que o sistema é fechado (`Workbook_BeforeClose`), o `modBackup.FazerBackup` salva uma cópia inteira do `.xlsm` com data/hora no nome dentro da pasta definida em `bd_config > PASTA_BACKUP`, e apaga as cópias mais antigas além das 60 mais recentes.
+
+Para que esse backup fique também na nuvem, **sem nenhuma integração de API**:
+
+1. Instale o **Google Drive para computador** (`drive.google.com/drive/download`) e faça login com a conta Google que vai guardar os arquivos.
+2. Escolha o modo **"Espelhar meus arquivos"** (não "Transmitir") — assim a pasta sincronizada existe fisicamente no disco (`C:\Users\<usuário>\Meu Drive\...`), sem depender de conexão para o Excel enxergar o arquivo.
+3. Dentro dessa pasta, crie uma pasta para os backups (ex.: `Meu Drive\Backups Lorena`).
+4. Abra `bd_config` no sistema (modo normal, com a senha de `SENHA_ADMIN`) e mude o valor de `PASTA_BACKUP` para o caminho completo dessa pasta.
+5. Pronto: a cada fechamento, a cópia é gravada ali e o Google Drive sobe sozinho para a nuvem, com histórico de versões pelo próprio Drive.
+
+Opcionalmente, pode-se mover o `TORO PDV.xlsm` e o `AbrirSistema.vbs` inteiros para dentro da pasta sincronizada (o `.vbs` encontra o `.xlsm` sozinho, desde que fiquem na mesma pasta) — aí o arquivo de trabalho principal também fica sincronizado em tempo real, além dos backups.
