@@ -1,0 +1,187 @@
+Option Explicit
+'=====================================================================
+' frmCaixa | Abertura, sangria, suprimento e fechamento com conferencia
+'=====================================================================
+
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    Me.txtValorAbertura.Value = "0,00"
+    Me.lblTotalDia.Font.Bold = True
+    Me.lblTotalDia.Font.Size = 11
+    Me.lblStatus.Font.Bold = True
+    Me.lblStatus.Font.Size = 12
+    Me.lblDiferenca.Font.Bold = True
+    Me.lblDiferenca.Font.Size = 12
+    AtualizarTela
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.Initialize", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Recarrega status, movimentos e resumo por forma de pagamento.
+'---------------------------------------------------------------------
+Private Sub AtualizarTela()
+    Dim aberto As Boolean
+    On Error GoTo ErrorHandler
+    aberto = modCaixa.CaixaAberto()
+
+    If aberto Then
+        Me.lblStatus.Caption = "CAIXA ABERTO  -  " & Format$(Date, "dd/mm/yyyy") & _
+                               "  |  Operador: " & gUsuario
+        Me.lblStatus.ForeColor = RGB(0, 128, 0)
+    Else
+        Me.lblStatus.Caption = "CAIXA FECHADO  -  " & Format$(Date, "dd/mm/yyyy")
+        Me.lblStatus.ForeColor = RGB(200, 0, 0)
+    End If
+
+    Me.cmdAbrir.Enabled = Not aberto
+    Me.txtValorAbertura.Enabled = Not aberto
+    Me.cmdSangria.Enabled = aberto
+    Me.cmdSuprimento.Enabled = aberto
+    Me.cmdFechar.Enabled = aberto
+
+    modCaixa.CarregarMovimentos Me.lstMovimentos
+
+    Me.lblDinheiro.Caption = "Dinheiro: " & Moeda(modCaixa.TotalPorForma("DINHEIRO"))
+    Me.lblCredito.Caption = "Cartao Credito: " & Moeda(modCaixa.TotalPorForma("CARTAO CREDITO"))
+    Me.lblDebito.Caption = "Cartao Debito: " & Moeda(modCaixa.TotalPorForma("CARTAO DEBITO"))
+    Me.lblPix.Caption = "Pix: " & Moeda(modCaixa.TotalPorForma("PIX"))
+    Me.lblBoleto.Caption = "Boleto: " & Moeda(modCaixa.TotalPorForma("BOLETO"))
+    Me.lblCheque.Caption = "Cheque: " & Moeda(modCaixa.TotalPorForma("CHEQUE"))
+    Me.lblVale.Caption = "Vale: " & Moeda(modCaixa.TotalPorForma("VALE"))
+    Me.lblAPrazo.Caption = "A prazo: " & Moeda(modCaixa.TotalPorForma("A PRAZO"))
+    Me.lblTotalDia.Caption = "TOTAL DO DIA: " & Moeda(modCaixa.TotalGeralDia())
+    Me.lblEsperado.Caption = "Esperado em dinheiro: " & Moeda(modCaixa.SaldoDinheiro())
+
+    CalcularDiferenca
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.AtualizarTela", Err.Description
+End Sub
+
+'=====================================================================
+' ABERTURA
+'=====================================================================
+Private Sub cmdAbrir_Click()
+    On Error GoTo ErrorHandler
+    If Num(Me.txtValorAbertura.Value) < 0 Then
+        MsgBox "Fundo de troco invalido.", vbExclamation: Exit Sub
+    End If
+    If MsgBox("Abrir o caixa com fundo de troco de " & _
+              Moeda(Me.txtValorAbertura.Value) & "?", vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+
+    If modCaixa.AbrirCaixa(Num(Me.txtValorAbertura.Value)) Then
+        MsgBox "Caixa aberto com sucesso.", vbInformation
+        AtualizarTela
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.cmdAbrir", Err.Description
+End Sub
+
+'=====================================================================
+' SANGRIA E SUPRIMENTO
+'=====================================================================
+Private Sub cmdSangria_Click()
+    On Error GoTo ErrorHandler
+    If Trim$(Me.txtObsMov.Value) = "" Then
+        MsgBox "Informe o motivo da sangria (ex.: retirada para o cofre).", vbExclamation
+        Me.txtObsMov.SetFocus: Exit Sub
+    End If
+    If modCaixa.Sangria(Num(Me.txtValorMovimento.Value), CStr(Me.txtObsMov.Value)) Then
+        MsgBox "Sangria registrada.", vbInformation
+        Me.txtValorMovimento.Value = ""
+        Me.txtObsMov.Value = ""
+        AtualizarTela
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.cmdSangria", Err.Description
+End Sub
+
+Private Sub cmdSuprimento_Click()
+    On Error GoTo ErrorHandler
+    If Trim$(Me.txtObsMov.Value) = "" Then
+        MsgBox "Informe o motivo do suprimento.", vbExclamation
+        Me.txtObsMov.SetFocus: Exit Sub
+    End If
+    If modCaixa.Suprimento(Num(Me.txtValorMovimento.Value), CStr(Me.txtObsMov.Value)) Then
+        MsgBox "Suprimento registrado.", vbInformation
+        Me.txtValorMovimento.Value = ""
+        Me.txtObsMov.Value = ""
+        AtualizarTela
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.cmdSuprimento", Err.Description
+End Sub
+
+'=====================================================================
+' FECHAMENTO E QUEBRA DE CAIXA
+'=====================================================================
+Private Sub txtValorApurado_Change()
+    CalcularDiferenca
+End Sub
+
+Private Sub CalcularDiferenca()
+    Dim dif As Double
+    On Error Resume Next
+    dif = Num(Me.txtValorApurado.Value) - modCaixa.SaldoDinheiro()
+
+    If Num(Me.txtValorApurado.Value) = 0 Then
+        Me.lblDiferenca.Caption = "Diferenca: informe o valor contado na gaveta"
+        Me.lblDiferenca.ForeColor = RGB(80, 80, 80)
+    ElseIf Abs(dif) < 0.01 Then
+        Me.lblDiferenca.Caption = "CAIXA CONFERIDO - sem diferenca"
+        Me.lblDiferenca.ForeColor = RGB(0, 128, 0)
+    ElseIf dif < 0 Then
+        Me.lblDiferenca.Caption = "QUEBRA DE CAIXA (falta): " & Moeda(Abs(dif))
+        Me.lblDiferenca.ForeColor = RGB(200, 0, 0)
+    Else
+        Me.lblDiferenca.Caption = "SOBRA DE CAIXA: " & Moeda(dif)
+        Me.lblDiferenca.ForeColor = RGB(0, 70, 160)
+    End If
+End Sub
+
+Private Sub cmdFechar_Click()
+    Dim dif As Double, msg As String
+    On Error GoTo ErrorHandler
+
+    If Num(Me.txtValorApurado.Value) = 0 Then
+        If MsgBox("Valor apurado esta zerado. Fechar assim mesmo?", _
+                  vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    End If
+
+    msg = "Resumo do fechamento:" & vbCrLf & vbCrLf & _
+          "Esperado em dinheiro: " & Moeda(modCaixa.SaldoDinheiro()) & vbCrLf & _
+          "Contado na gaveta: " & Moeda(Me.txtValorApurado.Value) & vbCrLf & _
+          "Total movimentado: " & Moeda(modCaixa.TotalGeralDia()) & vbCrLf & vbCrLf & _
+          "Confirma o FECHAMENTO do caixa?"
+    If MsgBox(msg, vbYesNo + vbQuestion, "Fechamento de caixa") <> vbYes Then Exit Sub
+
+    dif = modCaixa.FecharCaixa(Num(Me.txtValorApurado.Value))
+
+    If Abs(dif) < 0.01 Then
+        MsgBox "Caixa fechado sem diferenca.", vbInformation
+    ElseIf dif < 0 Then
+        MsgBox "Caixa fechado com QUEBRA de " & Moeda(Abs(dif)) & "." & vbCrLf & _
+               "A diferenca foi registrada no historico.", vbExclamation
+    Else
+        MsgBox "Caixa fechado com SOBRA de " & Moeda(dif) & ".", vbExclamation
+    End If
+
+    AtualizarTela
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCaixa.cmdFechar", Err.Description
+    MsgBox "Erro ao fechar o caixa: " & Err.Description, vbCritical
+End Sub
+
+Private Sub cmdAtualizar_Click()
+    AtualizarTela
+End Sub
+
+Private Sub cmdSair_Click()
+    Unload Me
+End Sub

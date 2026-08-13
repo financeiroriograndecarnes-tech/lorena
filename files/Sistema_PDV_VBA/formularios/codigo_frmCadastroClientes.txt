@@ -1,0 +1,290 @@
+Option Explicit
+'=====================================================================
+' frmCadastroClientes | Salvar, Editar, Excluir, Pesquisar, Limpar
+' + validacao de limite de credito e trava de bloqueio
+' + consulta de endereco por CEP (API ViaCEP)
+'=====================================================================
+
+Private mLinhaAtual As Long        ' linha do registro carregado (0 = novo)
+
+'---------------------------------------------------------------------
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    CarregarLista Me.cboStatus, "Ativo|Bloqueado"
+    CarregarLista Me.cboAPrazo, "Sim|Nao"
+    Me.cboStatus.ListIndex = 0
+    Me.cboAPrazo.ListIndex = 1
+    Me.lblSaldo.ForeColor = RGB(0, 70, 160)
+    CarregarLista_Clientes ""
+    NovoRegistro
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.Initialize", Err.Description
+End Sub
+
+'=====================================================================
+' NAVEGACAO / LISTA
+'=====================================================================
+Private Sub CarregarLista_Clientes(ByVal filtro As String)
+    Dim ws As Worksheet, i As Long, ult As Long, n As Long, nome As String
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_CLI)
+    ult = UltimaLinha(ws)
+    Me.lstClientes.Clear
+    filtro = UCase$(Trim$(filtro))
+
+    For i = 2 To ult
+        nome = CStr(ws.Cells(i, C_NOM).Value)
+        If nome <> "" Then
+            If filtro = "" _
+               Or InStr(1, UCase$(nome), filtro) > 0 _
+               Or InStr(1, CStr(ws.Cells(i, C_DOC).Value), filtro) > 0 _
+               Or InStr(1, CStr(ws.Cells(i, C_CEL).Value), filtro) > 0 Then
+
+                Me.lstClientes.AddItem ws.Cells(i, C_COD).Value
+                Me.lstClientes.List(n, 1) = nome
+                Me.lstClientes.List(n, 2) = ws.Cells(i, C_CEL).Value
+                Me.lstClientes.List(n, 3) = ws.Cells(i, C_STA).Value
+                Me.lstClientes.List(n, 4) = ws.Cells(i, C_PRZ).Value
+                Me.lstClientes.List(n, 5) = CStr(i)       ' coluna oculta: linha
+                n = n + 1
+            End If
+        End If
+    Next i
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.CarregarLista", Err.Description
+End Sub
+
+Private Sub lstClientes_Click()
+    Dim lin As Long
+    On Error GoTo ErrorHandler
+    If Me.lstClientes.ListIndex < 0 Then Exit Sub
+    lin = CLng(Me.lstClientes.List(Me.lstClientes.ListIndex, 5))
+    CarregarRegistro lin
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.lstClientes_Click", Err.Description
+End Sub
+
+Private Sub CarregarRegistro(ByVal lin As Long)
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_CLI)
+    mLinhaAtual = lin
+
+    Me.txtCodigo.Value = ws.Cells(lin, C_COD).Value
+    Me.txtNome.Value = ws.Cells(lin, C_NOM).Value
+    Me.txtCpfCnpj.Value = ws.Cells(lin, C_DOC).Value
+    Me.txtTelefone.Value = ws.Cells(lin, C_TEL).Value
+    Me.txtCelular.Value = ws.Cells(lin, C_CEL).Value
+    Me.txtLimite.Value = Format$(Num(ws.Cells(lin, C_LIM).Value), "#,##0.00")
+    Me.cboStatus.Value = ws.Cells(lin, C_STA).Value
+    Me.cboAPrazo.Value = ws.Cells(lin, C_PRZ).Value
+    Me.txtCEP.Value = ws.Cells(lin, C_CEP).Value
+    Me.txtEndereco.Value = ws.Cells(lin, C_END).Value
+    Me.txtBairro.Value = ws.Cells(lin, C_BAI).Value
+    Me.txtCidade.Value = ws.Cells(lin, C_CID).Value
+    Me.txtUF.Value = ws.Cells(lin, C_UF).Value
+
+    MostrarSituacaoFinanceira CStr(ws.Cells(lin, C_NOM).Value)
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.CarregarRegistro", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Mostra saldo devedor, credito disponivel e alerta de inadimplencia.
+'---------------------------------------------------------------------
+Private Sub MostrarSituacaoFinanceira(ByVal nome As String)
+    Dim devedor As Double, disp As Double
+    On Error Resume Next
+    devedor = modCadastros.SaldoDevedor(nome)
+    disp = modCadastros.CreditoDisponivel(nome)
+    Me.lblSaldo.Caption = "Devedor: " & Moeda(devedor) & "  |  Disponivel: " & Moeda(disp)
+    If modCadastros.ClienteInadimplente(nome) Then
+        Me.lblSaldo.Caption = Me.lblSaldo.Caption & "  [INADIMPLENTE]"
+        Me.lblSaldo.ForeColor = RGB(200, 0, 0)
+    ElseIf disp < 0 Then
+        Me.lblSaldo.ForeColor = RGB(200, 0, 0)
+    Else
+        Me.lblSaldo.ForeColor = RGB(0, 128, 0)
+    End If
+End Sub
+
+'=====================================================================
+' CRUD
+'=====================================================================
+Private Sub cmdNovo_Click()
+    NovoRegistro
+End Sub
+
+Private Sub NovoRegistro()
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_CLI)
+    LimparControles Me
+    CarregarLista Me.cboStatus, "Ativo|Bloqueado"
+    CarregarLista Me.cboAPrazo, "Sim|Nao"
+    mLinhaAtual = 0
+    Me.txtCodigo.Value = ProximoId(ws, C_COD)
+    Me.cboStatus.ListIndex = 0
+    Me.cboAPrazo.ListIndex = 1
+    Me.txtLimite.Value = "0,00"
+    Me.lblSaldo.Caption = "Devedor: R$ 0,00  |  Disponivel: R$ 0,00"
+    CarregarLista_Clientes ""
+    Me.txtNome.SetFocus
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.NovoRegistro", Err.Description
+End Sub
+
+Private Sub cmdLimpar_Click()
+    NovoRegistro
+End Sub
+
+Private Sub cmdSalvar_Click()
+    Dim ws As Worksheet, lin As Long
+    On Error GoTo ErrorHandler
+
+    '--- validacoes ---
+    If Trim$(Me.txtNome.Value) = "" Then
+        MsgBox "Informe o nome / razao social.", vbExclamation: Me.txtNome.SetFocus: Exit Sub
+    End If
+    If Not modCEP.ValidarCpfCnpj(CStr(Me.txtCpfCnpj.Value)) Then
+        If MsgBox("CPF/CNPJ invalido. Salvar mesmo assim?", vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    End If
+    If Num(Me.txtLimite.Value) < 0 Then
+        MsgBox "Limite de credito nao pode ser negativo.", vbExclamation: Exit Sub
+    End If
+    If UCase$(Txt(Me.cboAPrazo.Value)) = "SIM" And Num(Me.txtLimite.Value) = 0 Then
+        If MsgBox("Cliente autorizado a prazo com limite ZERO. Continuar?", _
+                  vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    End If
+
+    Turbo True
+    Set ws = Aba(SH_CLI)
+
+    If mLinhaAtual = 0 Then
+        lin = ProximaLinha(ws)
+        ws.Cells(lin, C_COD).Value = CLng(Num(Me.txtCodigo.Value))
+        ws.Cells(lin, C_DTC).Value = Date
+    Else
+        lin = mLinhaAtual
+    End If
+
+    ws.Cells(lin, C_NOM).Value = Trim$(Me.txtNome.Value)
+    ws.Cells(lin, C_DOC).Value = "'" & modCEP.SomenteNumeros(CStr(Me.txtCpfCnpj.Value))
+    ws.Cells(lin, C_TEL).Value = Me.txtTelefone.Value
+    ws.Cells(lin, C_CEL).Value = Me.txtCelular.Value
+    ws.Cells(lin, C_LIM).Value = Num(Me.txtLimite.Value)
+    ws.Cells(lin, C_STA).Value = Txt(Me.cboStatus.Value)
+    ws.Cells(lin, C_PRZ).Value = Txt(Me.cboAPrazo.Value)
+    ws.Cells(lin, C_CEP).Value = "'" & modCEP.FormatarCEP(CStr(Me.txtCEP.Value))
+    ws.Cells(lin, C_END).Value = Me.txtEndereco.Value
+    ws.Cells(lin, C_BAI).Value = Me.txtBairro.Value
+    ws.Cells(lin, C_CID).Value = Me.txtCidade.Value
+    ws.Cells(lin, C_UF).Value = UCase$(Me.txtUF.Value)
+
+    Turbo False
+    MsgBox "Cliente salvo com sucesso.", vbInformation
+    CarregarLista_Clientes ""
+    mLinhaAtual = lin
+    Exit Sub
+ErrorHandler:
+    Turbo False
+    LogErro "frmCadastroClientes.cmdSalvar", Err.Description
+    MsgBox "Erro ao salvar: " & Err.Description, vbCritical
+End Sub
+
+Private Sub cmdExcluir_Click()
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    If mLinhaAtual = 0 Then MsgBox "Selecione um cliente na lista.", vbExclamation: Exit Sub
+
+    Set ws = Aba(SH_CLI)
+    If modCadastros.SaldoDevedor(CStr(ws.Cells(mLinhaAtual, C_NOM).Value)) > 0 Then
+        MsgBox "Nao e possivel excluir: o cliente possui parcelas em aberto.", vbCritical
+        Exit Sub
+    End If
+    If MsgBox("Confirma a exclusao de " & ws.Cells(mLinhaAtual, C_NOM).Value & "?", _
+              vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+
+    ws.Rows(mLinhaAtual).Delete
+    NovoRegistro
+    MsgBox "Cliente excluido.", vbInformation
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroClientes.cmdExcluir", Err.Description
+    MsgBox "Erro ao excluir: " & Err.Description, vbCritical
+End Sub
+
+'=====================================================================
+' PESQUISA
+'=====================================================================
+Private Sub cmdPesquisar_Click()
+    CarregarLista_Clientes CStr(Me.txtPesquisa.Value)
+End Sub
+
+Private Sub txtPesquisa_Change()
+    CarregarLista_Clientes CStr(Me.txtPesquisa.Value)
+End Sub
+
+'=====================================================================
+' CEP - API ViaCEP
+'=====================================================================
+Private Sub cmdBuscarCEP_Click()
+    BuscarCEP
+End Sub
+
+Private Sub txtCEP_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If Len(modCEP.SomenteNumeros(CStr(Me.txtCEP.Value))) = 8 Then BuscarCEP
+End Sub
+
+Private Sub BuscarCEP()
+    Dim e As Endereco
+    On Error GoTo ErrorHandler
+    Me.MousePointer = 11                       ' ampulheta
+    e = modCEP.ConsultarCEP(CStr(Me.txtCEP.Value))
+    Me.MousePointer = 0
+
+    If Not e.Sucesso Then
+        MsgBox e.erro, vbExclamation, "Consulta de CEP"
+        Exit Sub
+    End If
+
+    Me.txtEndereco.Value = e.logradouro
+    Me.txtBairro.Value = e.bairro
+    Me.txtCidade.Value = e.cidade
+    Me.txtUF.Value = e.UF
+    Me.txtCEP.Value = modCEP.FormatarCEP(Txt(Me.txtCEP.Value))
+    Me.txtEndereco.SetFocus
+    Exit Sub
+ErrorHandler:
+    Me.MousePointer = 0
+    LogErro "frmCadastroClientes.BuscarCEP", Err.Description
+End Sub
+
+'=====================================================================
+' TRAVA DE BLOQUEIO
+'=====================================================================
+Private Sub cboAPrazo_Change()
+    On Error Resume Next
+    If UCase$(Txt(Me.cboAPrazo.Value)) = "SIM" Then
+        If Trim$(Me.txtNome.Value) <> "" Then
+            If modCadastros.ClienteInadimplente(CStr(Me.txtNome.Value)) Then
+                MsgBox "Atencao: este cliente possui parcelas VENCIDAS." & vbCrLf & _
+                       "Liberar o credito a prazo por sua conta e risco.", _
+                       vbExclamation, "Cliente inadimplente"
+            End If
+        End If
+    End If
+End Sub
+
+Private Sub txtLimite_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    Me.txtLimite.Value = Format$(Num(Me.txtLimite.Value), "#,##0.00")
+End Sub
+
+Private Sub cmdFechar_Click()
+    Unload Me
+End Sub

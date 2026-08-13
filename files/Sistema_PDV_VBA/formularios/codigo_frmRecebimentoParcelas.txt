@@ -1,0 +1,282 @@
+Option Explicit
+'=====================================================================
+' frmRecebimentoParcelas | Pesquisa, juros/multa por atraso,
+' baixa total ou parcial e sinalizacao por cor.
+'
+' Observacao tecnica: a ListBox do VBA nao permite pintar linhas
+' individualmente. Por isso o status vem com marcador de texto
+' (VERDE / AMARELO / VERMELHO) e o botao "Relatorio" gera uma
+' planilha COM as cores reais aplicadas linha a linha.
+'=====================================================================
+
+Private mFiltroCliente As String
+Private mSomenteVencidas As Boolean
+
+'=====================================================================
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    CarregarLista Me.cboForma, FORMAS_PAG
+    Me.cboForma.ListIndex = 0
+    Me.txtDataPagamento.Value = Format$(Date, "dd/mm/yyyy")
+    Me.lblTotalDevido.Font.Bold = True
+    Me.lblTotalDevido.Font.Size = 12
+    Me.lblLegenda.Font.Size = 8
+
+    modFinanceiro.AtualizarStatusParcelas
+    CarregarParcelas
+    Exit Sub
+ErrorHandler:
+    LogErro "frmRecebimentoParcelas.Initialize", Err.Description
+End Sub
+
+'=====================================================================
+' LISTA DE PARCELAS
+'=====================================================================
+Private Sub CarregarParcelas()
+    Dim ws As Worksheet, i As Long, ult As Long, n As Long
+    Dim cliente As String, status As String
+    Dim aberto As Double, vencido As Double, devido As Double
+
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_REC)
+    ult = UltimaLinha(ws)
+    Me.lstParcelas.Clear
+
+    For i = 2 To ult
+        cliente = CStr(ws.Cells(i, R_CLI).Value)
+        status = CStr(ws.Cells(i, R_STA).Value)
+
+        If FiltroOk(cliente, status) Then
+            devido = modFinanceiro.ValorDevido(i)
+
+            Me.lstParcelas.AddItem ws.Cells(i, R_ID).Value
+            Me.lstParcelas.List(n, 1) = ws.Cells(i, R_VEN).Value
+            Me.lstParcelas.List(n, 2) = cliente
+            Me.lstParcelas.List(n, 3) = Format$(ws.Cells(i, R_VCT).Value, "dd/mm/yy")
+            Me.lstParcelas.List(n, 4) = Format$(Num(ws.Cells(i, R_VLR).Value), "#,##0.00")
+            Me.lstParcelas.List(n, 5) = Format$(Num(ws.Cells(i, R_PGO).Value), "#,##0.00")
+            Me.lstParcelas.List(n, 6) = Format$(Num(ws.Cells(i, R_JUR).Value), "#,##0.00")
+            Me.lstParcelas.List(n, 7) = Format$(devido, "#,##0.00")
+            Me.lstParcelas.List(n, 8) = Marcador(status) & " " & status
+            n = n + 1
+
+            If UCase$(status) <> "PAGO" Then
+                aberto = aberto + Num(ws.Cells(i, R_VLR).Value) - Num(ws.Cells(i, R_PGO).Value)
+                If UCase$(status) = "VENCIDO" Then
+                    vencido = vencido + Num(ws.Cells(i, R_VLR).Value) - Num(ws.Cells(i, R_PGO).Value)
+                End If
+            End If
+        End If
+    Next i
+
+    Me.lblTotalAberto.Caption = "Em aberto: " & Moeda(aberto)
+    Me.lblTotalVencido.Caption = "Vencido: " & Moeda(vencido)
+    Me.lblTotalVencido.ForeColor = IIf(vencido > 0, RGB(200, 0, 0), RGB(0, 128, 0))
+    Exit Sub
+ErrorHandler:
+    LogErro "frmRecebimentoParcelas.CarregarParcelas", Err.Description
+End Sub
+
+Private Function FiltroOk(ByVal cliente As String, ByVal status As String) As Boolean
+    If cliente = "" Then FiltroOk = False: Exit Function
+    If mSomenteVencidas And UCase$(status) <> "VENCIDO" Then FiltroOk = False: Exit Function
+    If mFiltroCliente = "" Then FiltroOk = True: Exit Function
+    FiltroOk = (InStr(1, UCase$(cliente), UCase$(mFiltroCliente)) > 0)
+End Function
+
+Private Function Marcador(ByVal status As String) As String
+    Select Case UCase$(status)
+        Case "PAGO":    Marcador = "[VERDE]"
+        Case "VENCIDO": Marcador = "[VERMELHO]"
+        Case "PARCIAL": Marcador = "[AZUL]"
+        Case Else:      Marcador = "[AMARELO]"
+    End Select
+End Function
+
+'=====================================================================
+' SELECAO DE PARCELA
+'=====================================================================
+Private Sub lstParcelas_Click()
+    Dim ws As Worksheet, lin As Long, idP As Long
+    Dim saldo As Double, juros As Double, multa As Double, dias As Long
+    On Error GoTo ErrorHandler
+
+    If Me.lstParcelas.ListIndex < 0 Then Exit Sub
+    idP = CLng(Num(Me.lstParcelas.List(Me.lstParcelas.ListIndex, 0)))
+    Set ws = Aba(SH_REC)
+    lin = LocalizarLinha(ws, R_ID, idP)
+    If lin = 0 Then Exit Sub
+
+    saldo = Num(ws.Cells(lin, R_VLR).Value) - Num(ws.Cells(lin, R_PGO).Value)
+    dias = modFinanceiro.DiasAtraso(ParaData(ws.Cells(lin, R_VCT).Value))
+    juros = modFinanceiro.CalcularJuros(saldo, ParaData(ws.Cells(lin, R_VCT).Value))
+    multa = modFinanceiro.CalcularMulta(saldo, ParaData(ws.Cells(lin, R_VCT).Value))
+
+    Me.lblAtraso.Caption = "Dias em atraso: " & dias
+    Me.lblAtraso.ForeColor = IIf(dias > 0, RGB(200, 0, 0), RGB(0, 128, 0))
+    Me.lblEncargos.Caption = "Saldo: " & Moeda(saldo) & "  |  Juros: " & Moeda(juros) & _
+                             "  |  Multa: " & Moeda(multa)
+    Me.lblTotalDevido.Caption = "TOTAL DEVIDO: " & Moeda(saldo + juros + multa)
+    Me.lblTotalDevido.ForeColor = modFinanceiro.CorStatus(CStr(ws.Cells(lin, R_STA).Value))
+    Me.txtValorRecebido.Value = Format$(saldo + juros + multa, "#,##0.00")
+    Exit Sub
+ErrorHandler:
+    LogErro "frmRecebimentoParcelas.lstParcelas_Click", Err.Description
+End Sub
+
+'=====================================================================
+' PESQUISA
+'=====================================================================
+Private Sub cmdPesquisar_Click()
+    mFiltroCliente = Trim$(Txt(Me.txtCliente.Value))
+    mSomenteVencidas = False
+    CarregarParcelas
+End Sub
+
+Private Sub cmdTodos_Click()
+    mFiltroCliente = ""
+    mSomenteVencidas = False
+    Me.txtCliente.Value = ""
+    CarregarParcelas
+End Sub
+
+Private Sub cmdSoVencidas_Click()
+    mSomenteVencidas = True
+    CarregarParcelas
+End Sub
+
+Private Sub cmdAtualizar_Click()
+    modFinanceiro.AtualizarStatusParcelas
+    CarregarParcelas
+End Sub
+
+'=====================================================================
+' BAIXA
+'=====================================================================
+Private Sub cmdBaixar_Click()
+    ExecutarBaixa False
+End Sub
+
+Private Sub cmdBaixaParcial_Click()
+    ExecutarBaixa True
+End Sub
+
+Private Sub ExecutarBaixa(ByVal parcial As Boolean)
+    Dim idP As Long, valor As Double, dataPag As Date, ws As Worksheet, lin As Long
+    On Error GoTo ErrorHandler
+
+    If Me.lstParcelas.ListIndex < 0 Then
+        MsgBox "Selecione a parcela na lista.", vbExclamation: Exit Sub
+    End If
+
+    idP = CLng(Num(Me.lstParcelas.List(Me.lstParcelas.ListIndex, 0)))
+    Set ws = Aba(SH_REC)
+    lin = LocalizarLinha(ws, R_ID, idP)
+    If lin = 0 Then Exit Sub
+
+    dataPag = ParaData(Me.txtDataPagamento.Value)
+    If dataPag = 0 Then dataPag = Date
+
+    If parcial Then
+        valor = Num(InputBox("Valor recebido nesta parcela:" & vbCrLf & _
+                             "Total devido: " & Moeda(modFinanceiro.ValorDevido(lin, dataPag)), _
+                             "Baixa parcial", Format$(Num(Me.txtValorRecebido.Value), "#,##0.00")))
+        If valor <= 0 Then Exit Sub
+    Else
+        valor = modFinanceiro.ValorDevido(lin, dataPag)
+        If MsgBox("Confirma o recebimento de " & Moeda(valor) & " de " & _
+                  ws.Cells(lin, R_CLI).Value & "?", vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+    End If
+
+    If Me.cboForma.ListIndex < 0 Then
+        MsgBox "Selecione a forma de pagamento.", vbExclamation: Exit Sub
+    End If
+
+    If modFinanceiro.BaixarParcela(idP, valor, dataPag, Txt(Me.cboForma.Value)) Then
+        MsgBox "Baixa registrada e lancada no caixa.", vbInformation
+        modCadastros.AtualizarBloqueios
+        CarregarParcelas
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmRecebimentoParcelas.ExecutarBaixa", Err.Description
+    MsgBox "Erro ao registrar a baixa: " & Err.Description, vbCritical
+End Sub
+
+'=====================================================================
+' CARNE E RELATORIO COLORIDO
+'=====================================================================
+Private Sub cmdCarne_Click()
+    Dim idVenda As Long
+    On Error GoTo ErrorHandler
+    If Me.lstParcelas.ListIndex < 0 Then
+        MsgBox "Selecione uma parcela para identificar a venda.", vbExclamation: Exit Sub
+    End If
+    idVenda = CLng(Num(Me.lstParcelas.List(Me.lstParcelas.ListIndex, 1)))
+    modImpressao.GerarCarne idVenda, True
+    Exit Sub
+ErrorHandler:
+    LogErro "frmRecebimentoParcelas.cmdCarne", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Gera uma planilha do resultado filtrado com as cores por status.
+'---------------------------------------------------------------------
+Private Sub cmdRelatorio_Click()
+    Dim wsR As Worksheet, ws As Worksheet, i As Long, ult As Long, lin As Long
+    Dim cliente As String, status As String
+    On Error GoTo ErrorHandler
+    Turbo True
+
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    ThisWorkbook.Worksheets("Relatorio_Parcelas").Delete
+    Application.DisplayAlerts = True
+    On Error GoTo ErrorHandler
+
+    Set wsR = ThisWorkbook.Worksheets.Add
+    wsR.Name = "Relatorio_Parcelas"
+    wsR.Range("A1:H1").Value = Array("Parcela", "Venda", "Cliente", "Vencimento", _
+                                     "Valor", "Pago", "Encargos", "Status")
+    wsR.Range("A1:H1").Font.Bold = True
+
+    Set ws = Aba(SH_REC)
+    ult = UltimaLinha(ws)
+    lin = 2
+    For i = 2 To ult
+        cliente = CStr(ws.Cells(i, R_CLI).Value)
+        status = CStr(ws.Cells(i, R_STA).Value)
+        If FiltroOk(cliente, status) Then
+            wsR.Cells(lin, 1).Value = ws.Cells(i, R_ID).Value
+            wsR.Cells(lin, 2).Value = ws.Cells(i, R_VEN).Value
+            wsR.Cells(lin, 3).Value = cliente
+            wsR.Cells(lin, 4).Value = ws.Cells(i, R_VCT).Value
+            wsR.Cells(lin, 5).Value = Num(ws.Cells(i, R_VLR).Value)
+            wsR.Cells(lin, 6).Value = Num(ws.Cells(i, R_PGO).Value)
+            wsR.Cells(lin, 7).Value = Num(ws.Cells(i, R_JUR).Value)
+            wsR.Cells(lin, 8).Value = status
+
+            Select Case UCase$(status)
+                Case "PAGO":    wsR.Range(wsR.Cells(lin, 1), wsR.Cells(lin, 8)).Interior.Color = RGB(198, 239, 206)
+                Case "VENCIDO": wsR.Range(wsR.Cells(lin, 1), wsR.Cells(lin, 8)).Interior.Color = RGB(255, 199, 206)
+                Case "PARCIAL": wsR.Range(wsR.Cells(lin, 1), wsR.Cells(lin, 8)).Interior.Color = RGB(189, 215, 238)
+                Case Else:      wsR.Range(wsR.Cells(lin, 1), wsR.Cells(lin, 8)).Interior.Color = RGB(255, 235, 156)
+            End Select
+            lin = lin + 1
+        End If
+    Next i
+
+    wsR.Columns("D").NumberFormat = "dd/mm/yyyy"
+    wsR.Columns("E:G").NumberFormat = "R$ #,##0.00"
+    wsR.Columns("A:H").AutoFit
+    Turbo False
+    wsR.Activate
+    Exit Sub
+ErrorHandler:
+    Turbo False
+    LogErro "frmRecebimentoParcelas.cmdRelatorio", Err.Description
+End Sub
+
+Private Sub cmdFechar_Click()
+    Unload Me
+End Sub

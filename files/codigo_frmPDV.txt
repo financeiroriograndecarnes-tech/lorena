@@ -1,0 +1,497 @@
+Option Explicit
+'=====================================================================
+' frmPDV | Ponto de Venda
+' Leitura de codigo de barras, varejo/atacado/orcamento/consignado,
+' desconto em R$ ou %, duas formas de pagamento, troco, parcelas
+' e baixa automatica de estoque.
+'=====================================================================
+
+Private mItens() As ItemVenda      ' vetor de itens da venda atual
+Private mQtd As Long               ' quantidade de itens no vetor
+Private mSubtotal As Double
+Private mDesconto As Double
+Private mTotal As Double
+
+'=====================================================================
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    ReDim mItens(1 To 500)
+    mQtd = 0
+
+    CarregarLista Me.cboTipoVenda, TIPOS_VENDA
+    CarregarLista Me.cboPag1, FORMAS_PAG
+    CarregarLista Me.cboPag2, FORMAS_PAG
+    CarregarLista Me.cboTipoDesconto, "R$|%"
+
+    Me.cboTipoVenda.ListIndex = 0
+    Me.cboPag1.ListIndex = 0
+    Me.cboTipoDesconto.ListIndex = 0
+    Me.txtQtd.Value = "1"
+    Me.txtCliente.Value = "CONSUMIDOR"
+    Me.txtVendedor.Value = IIf(gUsuario = "", CStr(Cfg("USUARIO_PADRAO", "OPERADOR")), gUsuario)
+    Me.txtParcelas.Value = "1"
+    Me.txtPrimeiroVenc.Value = Format$(Date + 30, "dd/mm/yyyy")
+
+    Me.lblTotal.Font.Size = 20
+    Me.lblTotal.Font.Bold = True
+    Me.lblTotal.ForeColor = RGB(237, 28, 36)
+    Me.lblSubtotal.Font.Size = 11
+    Me.lblCabItens.Font.Name = "Courier New"
+    Me.lblCabItens.Font.Size = 8
+
+    Me.lblCaixa.Caption = "Caixa: " & IIf(modCaixa.CaixaAberto(), "ABERTO", "FECHADO") & _
+                          "  |  " & Format$(Now, "dd/mm/yyyy hh:mm")
+    Recalcular
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.Initialize", Err.Description
+End Sub
+
+'=====================================================================
+' LEITURA DO CODIGO DE BARRAS
+' O leitor envia os digitos e um ENTER no final.
+' Aceita tambem o formato  QTD*CODIGO  (ex.: 3*789100).
+'=====================================================================
+Private Sub txtCodigo_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = vbKeyReturn Then
+        KeyCode = 0
+        ProcessarEntrada
+    End If
+End Sub
+
+Private Sub cmdAdicionar_Click()
+    ProcessarEntrada
+End Sub
+
+Private Sub ProcessarEntrada()
+    Dim entrada As String, p As Long
+    On Error GoTo ErrorHandler
+    entrada = Trim$(Me.txtCodigo.Value)
+    If entrada = "" Then Exit Sub
+
+    p = InStr(entrada, "*")
+    If p > 0 Then
+        Me.txtQtd.Value = Left$(entrada, p - 1)
+        entrada = Mid$(entrada, p + 1)
+    End If
+
+    AdicionarItem entrada, Num(Me.txtQtd.Value)
+
+    Me.txtCodigo.Value = ""
+    Me.txtQtd.Value = "1"
+    Me.txtCodigo.SetFocus
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.ProcessarEntrada", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Adiciona (ou soma) um item na lista da venda.
+'---------------------------------------------------------------------
+Private Sub AdicionarItem(ByVal chave As String, ByVal qtd As Double)
+    Dim ws As Worksheet, lin As Long, i As Long
+    Dim preco As Double, codigo As String, tabela As String
+    On Error GoTo ErrorHandler
+
+    If qtd <= 0 Then qtd = 1
+    Set ws = Aba(SH_PROD)
+    lin = modCadastros.LocalizarProduto(chave)
+    If lin = 0 Then
+        MsgBox "Produto nao encontrado: " & chave, vbExclamation, "PDV"
+        Me.lblProduto.Caption = ""
+        Exit Sub
+    End If
+
+    tabela = Txt(Me.cboTipoVenda.Value)
+    If tabela = ST_ORC Or tabela = "ORCAMENTO" Or tabela = "CONSIGNADO" Then tabela = "VAREJO"
+    preco = modCadastros.PrecoDoProduto(lin, tabela)
+
+    If preco <= 0 Then
+        MsgBox "Produto sem preco cadastrado.", vbExclamation: Exit Sub
+    End If
+
+    '--- alerta de estoque (nao bloqueia a venda) ---
+    If Num(ws.Cells(lin, P_EST).Value) < qtd Then
+        If MsgBox("Estoque insuficiente (" & Num(ws.Cells(lin, P_EST).Value) & _
+                  "). Continuar mesmo assim?", vbYesNo + vbExclamation, "Estoque") <> vbYes Then
+            Exit Sub
+        End If
+    End If
+
+    codigo = CStr(ws.Cells(lin, P_COD).Value)
+
+    '--- se o item ja esta na lista, apenas soma a quantidade ---
+    For i = 1 To mQtd
+        If mItens(i).codigo = codigo And mItens(i).precoUnit = preco Then
+            mItens(i).qtd = mItens(i).qtd + qtd
+            mItens(i).total = Application.WorksheetFunction.Round(mItens(i).qtd * preco, 2)
+            AtualizarLista
+            Me.lblProduto.Caption = mItens(i).descricao & "  |  " & Moeda(preco)
+            Exit Sub
+        End If
+    Next i
+
+    mQtd = mQtd + 1
+    If mQtd > UBound(mItens) Then ReDim Preserve mItens(1 To mQtd + 100)
+
+    mItens(mQtd).codigo = codigo
+    mItens(mQtd).descricao = CStr(ws.Cells(lin, P_DES).Value)
+    mItens(mQtd).unidade = CStr(ws.Cells(lin, P_UNI).Value)
+    mItens(mQtd).qtd = qtd
+    mItens(mQtd).precoUnit = preco
+    mItens(mQtd).total = Application.WorksheetFunction.Round(qtd * preco, 2)
+
+    Me.lblProduto.Caption = mItens(mQtd).descricao & "  |  " & Moeda(preco) & _
+                            " / " & mItens(mQtd).unidade
+    AtualizarLista
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.AdicionarItem", Err.Description
+    MsgBox "Erro ao adicionar item: " & Err.Description, vbCritical
+End Sub
+
+'---------------------------------------------------------------------
+' Redesenha a ListBox de itens e recalcula os totais.
+'---------------------------------------------------------------------
+Private Sub AtualizarLista()
+    Dim i As Long
+    On Error GoTo ErrorHandler
+    Me.lstItens.Clear
+    For i = 1 To mQtd
+        Me.lstItens.AddItem mItens(i).codigo
+        Me.lstItens.List(i - 1, 1) = mItens(i).descricao
+        Me.lstItens.List(i - 1, 2) = FmtQtd(mItens(i).qtd, mItens(i).unidade)
+        Me.lstItens.List(i - 1, 3) = Format$(mItens(i).precoUnit, "#,##0.00")
+        Me.lstItens.List(i - 1, 4) = Format$(mItens(i).total, "#,##0.00")
+        Me.lstItens.List(i - 1, 5) = mItens(i).unidade
+    Next i
+    Recalcular
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.AtualizarLista", Err.Description
+End Sub
+
+'=====================================================================
+' TOTAIS, DESCONTO E TROCO
+'=====================================================================
+Private Sub Recalcular()
+    Dim i As Long, pago As Double, troco As Double
+    On Error GoTo ErrorHandler
+
+    mSubtotal = 0
+    For i = 1 To mQtd
+        mSubtotal = mSubtotal + mItens(i).total
+    Next i
+
+    '--- desconto em R$ ou em % ---
+    If Txt(Me.cboTipoDesconto.Value) = "%" Then
+        mDesconto = Application.WorksheetFunction.Round( _
+                    mSubtotal * Num(Me.txtDesconto.Value) / 100, 2)
+    Else
+        mDesconto = Num(Me.txtDesconto.Value)
+    End If
+    If mDesconto > mSubtotal Then mDesconto = mSubtotal
+
+    mTotal = Application.WorksheetFunction.Round(mSubtotal - mDesconto, 2)
+
+    Me.lblSubtotal.Caption = "SUBTOTAL: " & Moeda(mSubtotal) & "   (" & mQtd & " itens)"
+    Me.lblDescontoAplic.Caption = "DESCONTO: " & Moeda(mDesconto)
+    Me.lblTotal.Caption = "TOTAL: " & Moeda(mTotal)
+
+    '--- troco somente sobre pagamento em dinheiro ---
+    pago = Num(Me.txtValorPag1.Value) + Num(Me.txtValorPag2.Value)
+    troco = pago - mTotal
+    If troco < 0 Then troco = 0
+    Me.lblTroco.Caption = "TROCO: " & Moeda(troco) & "   |   FALTA: " & _
+                          Moeda(IIf(pago < mTotal, mTotal - pago, 0))
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.Recalcular", Err.Description
+End Sub
+
+Private Sub txtDesconto_Change()
+    Recalcular
+End Sub
+
+Private Sub cboTipoDesconto_Change()
+    Recalcular
+End Sub
+
+Private Sub txtValorPag1_Change()
+    Recalcular
+End Sub
+
+Private Sub txtValorPag2_Change()
+    Recalcular
+End Sub
+
+'--- ao escolher a forma 1, sugere o valor total ---
+Private Sub cboPag1_Change()
+    On Error Resume Next
+    If Num(Me.txtValorPag1.Value) = 0 Then
+        Me.txtValorPag1.Value = Format$(mTotal, "#,##0.00")
+    End If
+    HabilitarParcelamento
+    Recalcular
+End Sub
+
+Private Sub cboPag2_Change()
+    On Error Resume Next
+    HabilitarParcelamento
+    Recalcular
+End Sub
+
+'--- campos de parcelamento so fazem sentido na venda a prazo ---
+Private Sub HabilitarParcelamento()
+    Dim aPrazo As Boolean
+    On Error Resume Next
+    aPrazo = (UCase$(Txt(Me.cboPag1.Value)) = "A PRAZO" Or UCase$(Txt(Me.cboPag2.Value)) = "A PRAZO")
+    Me.txtParcelas.Enabled = aPrazo
+    Me.txtPrimeiroVenc.Enabled = aPrazo
+End Sub
+
+'--- mudar a tabela de precos recalcula todos os itens ---
+Private Sub cboTipoVenda_Change()
+    Dim i As Long, lin As Long, tabela As String
+    On Error GoTo ErrorHandler
+    If mQtd = 0 Then Exit Sub
+
+    tabela = Txt(Me.cboTipoVenda.Value)
+    If tabela = "ORCAMENTO" Or tabela = "CONSIGNADO" Then tabela = "VAREJO"
+
+    For i = 1 To mQtd
+        lin = modCadastros.LocalizarProduto(mItens(i).codigo)
+        If lin > 0 Then
+            mItens(i).precoUnit = modCadastros.PrecoDoProduto(lin, tabela)
+            mItens(i).total = Application.WorksheetFunction.Round( _
+                              mItens(i).qtd * mItens(i).precoUnit, 2)
+        End If
+    Next i
+    AtualizarLista
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.cboTipoVenda_Change", Err.Description
+End Sub
+
+'=====================================================================
+' REMOVER ITEM / CANCELAR
+'=====================================================================
+Private Sub cmdRemoverItem_Click()
+    Dim idx As Long, i As Long
+    On Error GoTo ErrorHandler
+    idx = Me.lstItens.ListIndex
+    If idx < 0 Then MsgBox "Selecione o item que deseja remover.", vbExclamation: Exit Sub
+    If MsgBox("Remover " & mItens(idx + 1).descricao & "?", vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+
+    For i = idx + 1 To mQtd - 1
+        mItens(i) = mItens(i + 1)
+    Next i
+    mQtd = mQtd - 1
+    AtualizarLista
+    Me.txtCodigo.SetFocus
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.cmdRemoverItem", Err.Description
+End Sub
+
+Private Sub cmdCancelarVenda_Click()
+    On Error GoTo ErrorHandler
+    If mQtd = 0 Then Exit Sub
+    If MsgBox("Cancelar toda a venda em andamento?", vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    LimparVenda
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.cmdCancelarVenda", Err.Description
+End Sub
+
+Private Sub LimparVenda()
+    On Error Resume Next
+    ReDim mItens(1 To 500)
+    mQtd = 0
+    Me.lstItens.Clear
+    Me.txtDesconto.Value = ""
+    Me.txtValorPag1.Value = ""
+    Me.txtValorPag2.Value = ""
+    Me.cboPag2.ListIndex = -1
+    Me.txtCliente.Value = "CONSUMIDOR"
+    Me.txtCodigo.Value = ""
+    Me.txtQtd.Value = "1"
+    Me.lblProduto.Caption = ""
+    Me.txtParcelas.Value = "1"
+    Me.txtPrimeiroVenc.Value = Format$(Date + 30, "dd/mm/yyyy")
+    Recalcular
+    Me.txtCodigo.SetFocus
+End Sub
+
+'=====================================================================
+' CLIENTE
+'=====================================================================
+Private Sub cmdBuscarCliente_Click()
+    Dim busca As String, ws As Worksheet, i As Long, ult As Long, achou As Boolean
+    On Error GoTo ErrorHandler
+    busca = InputBox("Digite parte do nome do cliente:", "Buscar cliente")
+    If busca = "" Then Exit Sub
+
+    Set ws = Aba(SH_CLI)
+    ult = UltimaLinha(ws)
+    For i = 2 To ult
+        If InStr(1, UCase$(CStr(ws.Cells(i, C_NOM).Value)), UCase$(busca)) > 0 Then
+            If MsgBox("Usar o cliente: " & ws.Cells(i, C_NOM).Value & "?" & vbCrLf & _
+                      "Credito disponivel: " & _
+                      Moeda(modCadastros.CreditoDisponivel(CStr(ws.Cells(i, C_NOM).Value))), _
+                      vbYesNo + vbQuestion) = vbYes Then
+                Me.txtCliente.Value = ws.Cells(i, C_NOM).Value
+                achou = True
+                Exit For
+            End If
+        End If
+    Next i
+    If Not achou Then MsgBox "Nenhum cliente selecionado.", vbInformation
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.cmdBuscarCliente", Err.Description
+End Sub
+
+'=====================================================================
+' FINALIZACAO
+'=====================================================================
+Private Sub cmdFinalizar_Click()
+    FinalizarVenda ST_CONC
+End Sub
+
+Private Sub cmdOrcamento_Click()
+    FinalizarVenda ST_ORC
+End Sub
+
+Private Sub cmdConsignado_Click()
+    FinalizarVenda ST_CONS
+End Sub
+
+'---------------------------------------------------------------------
+' Rotina unica de finalizacao. status define o comportamento:
+' Concluida  -> baixa estoque, lanca caixa e gera parcelas
+' Orcamento  -> apenas registra (nao mexe em estoque nem caixa)
+' Consignado -> baixa estoque, nao lanca caixa
+'---------------------------------------------------------------------
+Private Sub FinalizarVenda(ByVal status As String)
+    Dim idVenda As Long, pago As Double, troco As Double
+    Dim fp1 As String, fp2 As String, vp1 As Double, vp2 As Double
+    Dim aviso As String, nParc As Long, venc As Date
+
+    On Error GoTo ErrorHandler
+
+    '--- validacoes basicas ---
+    If mQtd = 0 Then MsgBox "Nenhum item na venda.", vbExclamation: Exit Sub
+
+    If status = ST_CONC Then
+        If Not modCaixa.CaixaAberto() Then
+            MsgBox "O caixa esta fechado. Abra o caixa antes de finalizar.", vbCritical
+            Exit Sub
+        End If
+        If Me.cboPag1.ListIndex < 0 Then
+            MsgBox "Selecione a forma de pagamento.", vbExclamation
+            Me.cboPag1.SetFocus: Exit Sub
+        End If
+    End If
+
+    Recalcular
+    fp1 = Txt(Me.cboPag1.Value)
+    fp2 = Txt(Me.cboPag2.Value)
+    vp1 = Num(Me.txtValorPag1.Value)
+    vp2 = Num(Me.txtValorPag2.Value)
+
+    If status = ST_CONC Then
+        '--- se so ha uma forma e o valor esta em branco, assume o total ---
+        If vp1 = 0 And vp2 = 0 Then vp1 = mTotal
+
+        pago = vp1 + vp2
+        If pago < mTotal - 0.009 Then
+            MsgBox "Valor pago (" & Moeda(pago) & ") menor que o total (" & _
+                   Moeda(mTotal) & ").", vbExclamation
+            Exit Sub
+        End If
+
+        troco = Application.WorksheetFunction.Round(pago - mTotal, 2)
+        '--- so ha troco em dinheiro ---
+        If troco > 0 And UCase$(fp1) <> "DINHEIRO" And UCase$(fp2) <> "DINHEIRO" Then
+            MsgBox "Troco so e permitido em pagamento com DINHEIRO." & vbCrLf & _
+                   "Ajuste os valores das formas de pagamento.", vbExclamation
+            Exit Sub
+        End If
+
+        '--- trava de credito para venda a prazo ---
+        If UCase$(fp1) = "A PRAZO" Or UCase$(fp2) = "A PRAZO" Then
+            Dim valorPrazo As Double
+            If UCase$(fp1) = "A PRAZO" Then valorPrazo = valorPrazo + vp1
+            If UCase$(fp2) = "A PRAZO" Then valorPrazo = valorPrazo + vp2
+            aviso = modCadastros.ValidarVendaAPrazo(Txt(Me.txtCliente.Value), valorPrazo)
+            If aviso <> "" Then
+                MsgBox "VENDA A PRAZO BLOQUEADA" & vbCrLf & vbCrLf & aviso, vbCritical
+                Exit Sub
+            End If
+        End If
+    Else
+        troco = 0
+        If status = ST_ORC Then fp1 = "": vp1 = 0: fp2 = "": vp2 = 0
+    End If
+
+    nParc = CLng(Num(Me.txtParcelas.Value))
+    If nParc < 1 Then nParc = 1
+    venc = ParaData(Me.txtPrimeiroVenc.Value)
+    If venc = 0 Then venc = Date + 30
+
+    '--- grava ---
+    idVenda = modVendas.GravarVenda(mItens, mQtd, Txt(Me.txtCliente.Value), _
+                Txt(Me.txtVendedor.Value), mSubtotal, mDesconto, mTotal, _
+                fp1, vp1, fp2, vp2, troco, status, Txt(Me.cboTipoVenda.Value), _
+                nParc, venc)
+
+    If idVenda = 0 Then Exit Sub
+
+    '--- impressao ---
+    If MsgBox("Venda #" & idVenda & " registrada." & vbCrLf & _
+              "Troco: " & Moeda(troco) & vbCrLf & vbCrLf & _
+              "Imprimir comprovante?", vbYesNo + vbInformation, "Venda concluida") = vbYes Then
+        modImpressao.ImprimirCupom idVenda
+    End If
+
+    If status = ST_CONC And (UCase$(fp1) = "A PRAZO" Or UCase$(fp2) = "A PRAZO") Then
+        If MsgBox("Gerar carne / promissoria em PDF?", vbYesNo + vbQuestion) = vbYes Then
+            modImpressao.GerarCarne idVenda, True
+        End If
+    End If
+
+    LimparVenda
+    Exit Sub
+ErrorHandler:
+    LogErro "frmPDV.FinalizarVenda", Err.Description
+    MsgBox "Erro ao finalizar a venda: " & Err.Description, vbCritical
+End Sub
+
+'=====================================================================
+' ATALHOS
+'=====================================================================
+Private Sub UserForm_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    Select Case KeyCode
+        Case vbKeyF2:  Me.txtCodigo.SetFocus
+        Case vbKeyF4:  cmdBuscarCliente_Click
+        Case vbKeyF12: cmdFinalizar_Click
+        Case vbKeyDelete: cmdRemoverItem_Click
+        Case vbKeyEscape: Unload Me
+    End Select
+End Sub
+
+Private Sub cmdFechar_Click()
+    If mQtd > 0 Then
+        If MsgBox("Existe uma venda em andamento. Sair mesmo assim?", _
+                  vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    End If
+    Unload Me
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    If CloseMode = 0 And mQtd > 0 Then
+        If MsgBox("Existe uma venda em andamento. Sair mesmo assim?", _
+                  vbYesNo + vbExclamation) <> vbYes Then Cancel = 1
+    End If
+End Sub

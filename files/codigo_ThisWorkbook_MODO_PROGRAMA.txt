@@ -1,0 +1,116 @@
+Option Explicit
+'=====================================================================
+' ThisWorkbook | Inicializacao em MODO PROGRAMA
+' SUBSTITUA todo o conteudo do modulo "EstaPasta_de_trabalho" por este
+' Requer o modulo modSistema.bas importado
+'=====================================================================
+
+Private Sub Workbook_Open()
+    Dim faltando As String
+    On Error GoTo ErrorHandler
+    Application.ScreenUpdating = False
+
+    '--- 1) verifica se a estrutura do banco existe ---
+    faltando = VerificarEstrutura()
+    If faltando <> "" Then
+        Application.ScreenUpdating = True
+        If MsgBox("Abas do banco de dados ausentes:" & vbCrLf & faltando & vbCrLf & vbCrLf & _
+                  "Deseja criar a estrutura agora?", vbYesNo + vbExclamation, _
+                  "Estrutura incompleta") = vbYes Then
+            modSetup.CriarEstrutura
+        Else
+            Exit Sub
+        End If
+    End If
+
+    '--- 2) identifica o operador da sessao ---
+    gUsuario = InputBox("Identifique o operador:", "Login", _
+                        CStr(Cfg("USUARIO_PADRAO", "OPERADOR")))
+    If Trim$(gUsuario) = "" Then gUsuario = CStr(Cfg("USUARIO_PADRAO", "OPERADOR"))
+
+    '--- 3) atualiza status financeiro do dia ---
+    modFinanceiro.AtualizarStatusParcelas
+    modCadastros.AtualizarBloqueios
+    modDashboard.AtualizarDashboard
+
+    '--- 4) verifica se o caixa do dia esta aberto ---
+    Application.ScreenUpdating = True
+    If Not modCaixa.CaixaAberto() Then
+        If MsgBox("O CAIXA DE HOJE AINDA NAO FOI ABERTO." & vbCrLf & vbCrLf & _
+                  "Deseja abrir o caixa agora?", vbYesNo + vbExclamation, _
+                  "Caixa fechado") = vbYes Then
+            frmCaixa.Show
+        End If
+    End If
+
+    '--- 5) alerta de contas vencidas ---
+    AlertasDoDia
+
+    '--- 6) MODO PROGRAMA: esconde a interface do Excel ---
+    Aba(SH_DASH).Activate
+    modSistema.ModoPrograma
+
+    '--- 7) o menu VIRA a janela do programa (modal, nao vbModeless) ---
+    frmMenu.Show
+
+    '--- 8) o menu foi fechado = o usuario saiu do sistema ---
+    modSistema.EncerrarSistema
+    Exit Sub
+
+ErrorHandler:
+    Application.ScreenUpdating = True
+    modSistema.RestaurarInterface     ' nunca deixar o Excel invisivel
+    LogErro "ThisWorkbook.Workbook_Open", Err.Description
+    MsgBox "Erro na inicializacao: " & Err.Description, vbCritical
+End Sub
+
+'---------------------------------------------------------------------
+' Retorna a lista de abas obrigatorias que estao faltando.
+'---------------------------------------------------------------------
+Private Function VerificarEstrutura() As String
+    Dim necessarias As Variant, i As Long, ws As Worksheet, falta As String
+    necessarias = Array(SH_PROD, SH_CLI, SH_VEN, SH_ITE, SH_CXA, SH_REC, SH_PAG, SH_CFG)
+    For i = LBound(necessarias) To UBound(necessarias)
+        Set ws = Nothing
+        On Error Resume Next
+        Set ws = ThisWorkbook.Worksheets(necessarias(i))
+        On Error GoTo 0
+        If ws Is Nothing Then falta = falta & "- " & necessarias(i) & vbCrLf
+    Next i
+    VerificarEstrutura = falta
+End Function
+
+'---------------------------------------------------------------------
+' Avisos operacionais na abertura.
+'---------------------------------------------------------------------
+Private Sub AlertasDoDia()
+    Dim msg As String, venc As Double, pagar As Double, baixo As Long
+    On Error Resume Next
+    venc = modFinanceiro.TotalReceber("VENCIDO")
+    pagar = modFinanceiro.TotalPagar("D")
+    baixo = modCadastros.ProdutosAbaixoMinimo()
+
+    If venc > 0 Then msg = msg & "- Contas a receber VENCIDAS: " & Moeda(venc) & vbCrLf
+    If pagar > 0 Then msg = msg & "- Contas a pagar com vencimento HOJE: " & Moeda(pagar) & vbCrLf
+    If baixo > 0 Then msg = msg & "- Produtos abaixo do estoque minimo: " & baixo & vbCrLf
+
+    If msg <> "" Then MsgBox "ALERTAS DO DIA" & vbCrLf & vbCrLf & msg, vbInformation, "Atencao"
+End Sub
+
+'---------------------------------------------------------------------
+' Protege o fechamento com caixa aberto e garante a interface de volta.
+'---------------------------------------------------------------------
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    On Error Resume Next
+    If modCaixa.CaixaAberto() Then
+        Application.Visible = True
+        If MsgBox("O caixa de hoje ainda esta ABERTO." & vbCrLf & _
+                  "Deseja fechar o caixa antes de sair?", vbYesNo + vbExclamation) = vbYes Then
+            Cancel = True
+            frmCaixa.Show
+            Exit Sub
+        End If
+    End If
+    modSistema.RestaurarInterface
+    ThisWorkbook.Save
+End Sub

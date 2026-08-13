@@ -1,0 +1,99 @@
+Option Explicit
+'=====================================================================
+' frmMenu | Menu principal do sistema
+'=====================================================================
+
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    Me.lblTitulo.Font.Size = 16
+    Me.lblTitulo.Font.Bold = True
+    Me.lblTitulo.ForeColor = RGB(237, 28, 36)
+    Me.lblTitulo.Caption = UCase$(CStr(Cfg("NOME_EMPRESA", "SISTEMA DE GESTAO")))
+    Me.lblRodape.Caption = "Usuario: " & gUsuario & "   |   " & Format$(Date, "dd/mm/yyyy")
+    AtualizarStatusCaixa
+    Exit Sub
+ErrorHandler:
+    LogErro "frmMenu.Initialize", Err.Description
+End Sub
+
+'---------------------------------------------------------------------
+' Mostra se o caixa do dia esta aberto e o saldo em dinheiro.
+'---------------------------------------------------------------------
+Public Sub AtualizarStatusCaixa()
+    On Error Resume Next
+    If modCaixa.CaixaAberto() Then
+        Me.lblCaixaStatus.Caption = "CAIXA ABERTO  |  Dinheiro em gaveta: " & _
+                                    Moeda(modCaixa.SaldoDinheiro())
+        Me.lblCaixaStatus.ForeColor = RGB(0, 128, 0)
+    Else
+        Me.lblCaixaStatus.Caption = "CAIXA FECHADO - abra o caixa antes de vender"
+        Me.lblCaixaStatus.ForeColor = RGB(200, 0, 0)
+    End If
+End Sub
+
+Private Sub cmdPDV_Click()
+    On Error GoTo ErrorHandler
+    If Not modCaixa.CaixaAberto() Then
+        MsgBox "Abra o caixa antes de iniciar as vendas.", vbExclamation, "Caixa fechado"
+        frmCaixa.Show
+        AtualizarStatusCaixa
+        Exit Sub
+    End If
+    frmPDV.Show
+    AtualizarStatusCaixa
+    Exit Sub
+ErrorHandler:
+    LogErro "frmMenu.cmdPDV", Err.Description
+End Sub
+
+Private Sub cmdCaixa_Click()
+    frmCaixa.Show
+    AtualizarStatusCaixa
+End Sub
+
+Private Sub cmdProdutos_Click()
+    frmCadastroProdutos.Show
+End Sub
+
+Private Sub cmdClientes_Click()
+    frmCadastroClientes.Show
+End Sub
+
+Private Sub cmdReceber_Click()
+    frmRecebimentoParcelas.Show
+End Sub
+
+Private Sub cmdDashboard_Click()
+    frmDashboard.Show
+End Sub
+
+Private Sub cmdEtiquetas_Click()
+    Dim ini As String, fim As String, cop As String
+    On Error GoTo ErrorHandler
+    ini = InputBox("Codigo inicial (vazio = todos):", "Etiquetas")
+    fim = InputBox("Codigo final (vazio = todos):", "Etiquetas")
+    cop = InputBox("Copias por produto:", "Etiquetas", "1")
+    modImpressao.GerarEtiquetas ini, fim, CLng(Num(cop))
+    Exit Sub
+ErrorHandler:
+    LogErro "frmMenu.cmdEtiquetas", Err.Description
+End Sub
+
+Private Sub cmdSair_Click()
+    Unload Me
+End Sub
+
+'---------------------------------------------------------------------
+' Atalhos de teclado F1..F6 e ESC.
+'---------------------------------------------------------------------
+Private Sub UserForm_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    Select Case KeyCode
+        Case vbKeyF1: cmdPDV_Click
+        Case vbKeyF2: cmdCaixa_Click
+        Case vbKeyF3: cmdProdutos_Click
+        Case vbKeyF4: cmdClientes_Click
+        Case vbKeyF5: cmdReceber_Click
+        Case vbKeyF6: cmdDashboard_Click
+        Case vbKeyEscape: Unload Me
+    End Select
+End Sub

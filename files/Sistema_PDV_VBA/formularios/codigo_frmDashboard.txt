@@ -1,0 +1,107 @@
+Option Explicit
+'=====================================================================
+' frmDashboard | Cards de resumo financeiro e operacional
+'=====================================================================
+
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    Me.lblTitulo.Font.Size = 16
+    Me.lblTitulo.Font.Bold = True
+    Me.lblTitulo.ForeColor = RGB(237, 28, 36)
+    Me.lblTitulo.Caption = "PAINEL FINANCEIRO - " & Cfg("NOME_EMPRESA", "")
+
+    FormatarTitulo Me.lblTitVendas
+    FormatarTitulo Me.lblTitReceber
+    FormatarTitulo Me.lblTitPagar
+    FormatarTitulo Me.lblTitResumo
+
+    Me.lblSaldoMes.Font.Bold = True
+    Me.lblSaldoMes.Font.Size = 12
+    Me.lblRecVencido.Font.Bold = True
+    Me.lblPagVencido.Font.Bold = True
+
+    CarregarIndicadores
+    Exit Sub
+ErrorHandler:
+    LogErro "frmDashboard.Initialize", Err.Description
+End Sub
+
+Private Sub FormatarTitulo(ByVal lbl As Object)
+    On Error Resume Next
+    lbl.Font.Bold = True
+    lbl.ForeColor = RGB(35, 31, 32)
+End Sub
+
+'---------------------------------------------------------------------
+' Le todos os indicadores dos modulos de calculo.
+'---------------------------------------------------------------------
+Private Sub CarregarIndicadores()
+    Dim vencR As Double, vencP As Double, saldo As Double
+    On Error GoTo ErrorHandler
+    Me.MousePointer = 11
+    modFinanceiro.AtualizarStatusParcelas
+
+    '--- VENDAS ---
+    Me.lblVendasDia.Caption = "Dia: " & Moeda(modVendas.TotalVendas("D"))
+    Me.lblVendasMes.Caption = "Mes: " & Moeda(modVendas.TotalVendas("M"))
+    Me.lblVendasAno.Caption = "Ano: " & Moeda(modVendas.TotalVendas("A"))
+    Me.lblQtdDia.Caption = "Itens dia: " & Format$(modVendas.QtdProdutosVendidos("D"), "#,##0.000")
+    Me.lblQtdMes.Caption = "Itens mes: " & Format$(modVendas.QtdProdutosVendidos("M"), "#,##0.000")
+    Me.lblQtdAno.Caption = "Itens ano: " & Format$(modVendas.QtdProdutosVendidos("A"), "#,##0.000")
+    Me.lblTicket.Caption = "Ticket medio mes: " & Moeda(modDashboard.TicketMedio("M"))
+
+    '--- CONTAS A RECEBER ---
+    vencR = modFinanceiro.TotalReceber("VENCIDO")
+    Me.lblRecHoje.Caption = "Hoje: " & Moeda(modFinanceiro.TotalReceber("D"))
+    Me.lblRecMes.Caption = "Mes: " & Moeda(modFinanceiro.TotalReceber("M"))
+    Me.lblRecAno.Caption = "Ano: " & Moeda(modFinanceiro.TotalReceber("A"))
+    Me.lblRecVencido.Caption = "EM ATRASO: " & Moeda(vencR)
+    Me.lblRecVencido.ForeColor = IIf(vencR > 0, RGB(200, 0, 0), RGB(0, 128, 0))
+
+    '--- CONTAS A PAGAR ---
+    vencP = modFinanceiro.TotalPagar("VENCIDO")
+    Me.lblPagHoje.Caption = "Hoje: " & Moeda(modFinanceiro.TotalPagar("D"))
+    Me.lblPagMes.Caption = "Mes: " & Moeda(modFinanceiro.TotalPagar("M"))
+    Me.lblPagAno.Caption = "Ano: " & Moeda(modFinanceiro.TotalPagar("A"))
+    Me.lblPagVencido.Caption = "EM ATRASO: " & Moeda(vencP)
+    Me.lblPagVencido.ForeColor = IIf(vencP > 0, RGB(200, 0, 0), RGB(0, 128, 0))
+
+    '--- RESUMO ---
+    saldo = modDashboard.SaldoBrutoMes()
+    Me.lblSaldoMes.Caption = "Saldo bruto do mes: " & Moeda(saldo)
+    Me.lblSaldoMes.ForeColor = IIf(saldo < 0, RGB(200, 0, 0), RGB(0, 128, 0))
+    Me.lblConsignado.Caption = "Estoque consignado: " & Moeda(modVendas.TotalPorStatus(ST_CONS))
+    Me.lblOrcamentos.Caption = "Orcamentos em aberto: " & Moeda(modVendas.TotalPorStatus(ST_ORC))
+    Me.lblEstoqueMin.Caption = "Produtos abaixo do minimo: " & modCadastros.ProdutosAbaixoMinimo()
+    Me.lblCaixaHoje.Caption = "Dinheiro em caixa: " & Moeda(modCaixa.SaldoDinheiro())
+    Me.lblAtualizado.Caption = "Atualizado: " & Format$(Now, "dd/mm/yyyy hh:mm")
+
+    Me.MousePointer = 0
+    Exit Sub
+ErrorHandler:
+    Me.MousePointer = 0
+    LogErro "frmDashboard.CarregarIndicadores", Err.Description
+End Sub
+
+Private Sub cmdAtualizar_Click()
+    CarregarIndicadores
+End Sub
+
+Private Sub cmdRanking_Click()
+    modDashboard.RankingProdutos
+    MsgBox "Ranking gerado na aba 'Ranking'.", vbInformation
+End Sub
+
+Private Sub cmdAbaDash_Click()
+    On Error GoTo ErrorHandler
+    modDashboard.AtualizarDashboard
+    Unload Me
+    Aba(SH_DASH).Activate
+    Exit Sub
+ErrorHandler:
+    LogErro "frmDashboard.cmdAbaDash", Err.Description
+End Sub
+
+Private Sub cmdFechar_Click()
+    Unload Me
+End Sub

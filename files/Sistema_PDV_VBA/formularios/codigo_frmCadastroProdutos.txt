@@ -1,0 +1,350 @@
+Option Explicit
+'=====================================================================
+' frmCadastroProdutos | 3 tabelas de preco, duplicar cadastro,
+' ajuste manual de estoque e calculo automatico pela margem
+'=====================================================================
+
+Private mLinhaAtual As Long
+Private mCalculando As Boolean     ' evita loop entre os eventos Change
+
+'---------------------------------------------------------------------
+Private Sub UserForm_Initialize()
+    On Error GoTo ErrorHandler
+    CarregarLista Me.cboUnidade, "UN|KG"
+    Me.cboUnidade.ListIndex = 0
+    CarregarLista_Produtos ""
+    NovoRegistro
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.Initialize", Err.Description
+End Sub
+
+'=====================================================================
+' LISTA
+'=====================================================================
+Private Sub CarregarLista_Produtos(ByVal filtro As String)
+    Dim ws As Worksheet, i As Long, ult As Long, n As Long, desc As String
+    On Error GoTo ErrorHandler
+    Set ws = Aba(SH_PROD)
+    ult = UltimaLinha(ws)
+    Me.lstProdutos.Clear
+    filtro = UCase$(Trim$(filtro))
+
+    For i = 2 To ult
+        desc = CStr(ws.Cells(i, P_DES).Value)
+        If desc <> "" Then
+            If filtro = "" _
+               Or InStr(1, UCase$(desc), filtro) > 0 _
+               Or InStr(1, CStr(ws.Cells(i, P_COD).Value), filtro) > 0 _
+               Or InStr(1, CStr(ws.Cells(i, P_BAR).Value), filtro) > 0 Then
+
+                Me.lstProdutos.AddItem ws.Cells(i, P_COD).Value
+                Me.lstProdutos.List(n, 1) = desc
+                Me.lstProdutos.List(n, 2) = Format$(Num(ws.Cells(i, P_VAR).Value), "#,##0.00")
+                Me.lstProdutos.List(n, 3) = CStr(i)        ' coluna oculta: linha
+                n = n + 1
+            End If
+        End If
+    Next i
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.CarregarLista", Err.Description
+End Sub
+
+Private Sub lstProdutos_Click()
+    On Error GoTo ErrorHandler
+    If Me.lstProdutos.ListIndex < 0 Then Exit Sub
+    CarregarRegistro CLng(Me.lstProdutos.List(Me.lstProdutos.ListIndex, 3))
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.lstProdutos_Click", Err.Description
+End Sub
+
+Private Sub CarregarRegistro(ByVal lin As Long)
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    mCalculando = True
+    Set ws = Aba(SH_PROD)
+    mLinhaAtual = lin
+
+    Me.txtCodigo.Value = ws.Cells(lin, P_COD).Value
+    Me.txtCodBarras.Value = ws.Cells(lin, P_BAR).Value
+    Me.txtDescricao.Value = ws.Cells(lin, P_DES).Value
+    Me.cboUnidade.Value = ws.Cells(lin, P_UNI).Value
+    Me.txtCusto.Value = Format$(Num(ws.Cells(lin, P_CUS).Value), "#,##0.00")
+    Me.txtMargem.Value = Format$(Num(ws.Cells(lin, P_MAR).Value), "#,##0.00")
+    Me.txtVarejo.Value = Format$(Num(ws.Cells(lin, P_VAR).Value), "#,##0.00")
+    Me.txtAtacado.Value = Format$(Num(ws.Cells(lin, P_ATA).Value), "#,##0.00")
+    Me.txtCartao.Value = Format$(Num(ws.Cells(lin, P_CAR).Value), "#,##0.00")
+    Me.txtEstoque.Value = Format$(Num(ws.Cells(lin, P_EST).Value), "#,##0.000")
+    Me.txtEstoqueMin.Value = Format$(Num(ws.Cells(lin, P_MIN).Value), "#,##0.000")
+    Me.txtFornecedor.Value = ws.Cells(lin, P_FOR).Value
+    If IsDate(ws.Cells(lin, P_VAL).Value) Then
+        Me.txtValidade.Value = Format$(ws.Cells(lin, P_VAL).Value, "dd/mm/yyyy")
+    Else
+        Me.txtValidade.Value = ""
+    End If
+    Me.txtFoto.Value = ws.Cells(lin, P_FOT).Value
+    CarregarFoto CStr(Me.txtFoto.Value)
+
+    mCalculando = False
+    Exit Sub
+ErrorHandler:
+    mCalculando = False
+    LogErro "frmCadastroProdutos.CarregarRegistro", Err.Description
+End Sub
+
+Private Sub CarregarFoto(ByVal caminho As String)
+    On Error Resume Next
+    Me.imgFoto.Picture = Nothing
+    If caminho <> "" Then
+        If Dir(caminho) <> "" Then Me.imgFoto.Picture = LoadPicture(caminho)
+    End If
+End Sub
+
+'=====================================================================
+' CALCULO AUTOMATICO DOS PRECOS
+' Preco Varejo = Custo * (1 + Margem/100)
+'=====================================================================
+Private Sub txtCusto_Change()
+    RecalcularPelaMargem
+End Sub
+
+Private Sub txtMargem_Change()
+    RecalcularPelaMargem
+End Sub
+
+Private Sub RecalcularPelaMargem()
+    Dim custo As Double, margem As Double, varejo As Double
+    Dim atac As Double, cart As Double
+    On Error GoTo ErrorHandler
+    If mCalculando Then Exit Sub
+    mCalculando = True
+
+    custo = Num(Me.txtCusto.Value)
+    margem = Num(Me.txtMargem.Value)
+    varejo = modCadastros.CalcularPrecoVenda(custo, margem)
+
+    Me.txtVarejo.Value = Format$(varejo, "#,##0.00")
+    modCadastros.GerarTabelasPreco varejo, atac, cart
+    Me.txtAtacado.Value = Format$(atac, "#,##0.00")
+    Me.txtCartao.Value = Format$(cart, "#,##0.00")
+
+    mCalculando = False
+    Exit Sub
+ErrorHandler:
+    mCalculando = False
+    LogErro "frmCadastroProdutos.RecalcularPelaMargem", Err.Description
+End Sub
+
+'--- se o usuario digitar o preco de varejo, a margem e recalculada ---
+Private Sub txtVarejo_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    Dim atac As Double, cart As Double
+    On Error GoTo ErrorHandler
+    If mCalculando Then Exit Sub
+    mCalculando = True
+
+    Me.txtMargem.Value = Format$(modCadastros.CalcularMargem( _
+        Num(Me.txtCusto.Value), Num(Me.txtVarejo.Value)), "#,##0.00")
+    modCadastros.GerarTabelasPreco Num(Me.txtVarejo.Value), atac, cart
+    Me.txtAtacado.Value = Format$(atac, "#,##0.00")
+    Me.txtCartao.Value = Format$(cart, "#,##0.00")
+
+    mCalculando = False
+    Exit Sub
+ErrorHandler:
+    mCalculando = False
+    LogErro "frmCadastroProdutos.txtVarejo_Exit", Err.Description
+End Sub
+
+'=====================================================================
+' CRUD
+'=====================================================================
+Private Sub cmdNovo_Click()
+    NovoRegistro
+End Sub
+
+Private Sub cmdLimpar_Click()
+    NovoRegistro
+End Sub
+
+Private Sub NovoRegistro()
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    mCalculando = True
+    Set ws = Aba(SH_PROD)
+    LimparControles Me
+    CarregarLista Me.cboUnidade, "UN|KG"
+    mLinhaAtual = 0
+    Me.txtCodigo.Value = ProximoId(ws, P_COD)
+    Me.cboUnidade.ListIndex = 0
+    Me.txtCusto.Value = "0,00"
+    Me.txtMargem.Value = "0,00"
+    Me.txtEstoque.Value = "0,000"
+    Me.txtEstoqueMin.Value = "0,000"
+    Me.imgFoto.Picture = Nothing
+    mCalculando = False
+    CarregarLista_Produtos ""
+    Me.txtCodBarras.SetFocus
+    Exit Sub
+ErrorHandler:
+    mCalculando = False
+    LogErro "frmCadastroProdutos.NovoRegistro", Err.Description
+End Sub
+
+Private Sub cmdSalvar_Click()
+    Dim ws As Worksheet, lin As Long, linDup As Long
+    On Error GoTo ErrorHandler
+
+    If Trim$(Me.txtDescricao.Value) = "" Then
+        MsgBox "Informe a descricao do produto.", vbExclamation
+        Me.txtDescricao.SetFocus: Exit Sub
+    End If
+    If Num(Me.txtVarejo.Value) <= 0 Then
+        If MsgBox("Preco de varejo zerado. Salvar mesmo assim?", vbYesNo + vbExclamation) <> vbYes Then Exit Sub
+    End If
+
+    '--- codigo de barras nao pode se repetir ---
+    Set ws = Aba(SH_PROD)
+    If Trim$(Me.txtCodBarras.Value) <> "" Then
+        linDup = LocalizarLinha(ws, P_BAR, Trim$(Me.txtCodBarras.Value))
+        If linDup > 0 And linDup <> mLinhaAtual Then
+            MsgBox "Este codigo de barras ja esta em uso pelo produto: " & _
+                   ws.Cells(linDup, P_DES).Value, vbCritical
+            Exit Sub
+        End If
+    End If
+
+    Turbo True
+    If mLinhaAtual = 0 Then
+        lin = ProximaLinha(ws)
+        ws.Cells(lin, P_COD).Value = CLng(Num(Me.txtCodigo.Value))
+    Else
+        lin = mLinhaAtual
+    End If
+
+    ws.Cells(lin, P_BAR).Value = "'" & Trim$(Me.txtCodBarras.Value)
+    ws.Cells(lin, P_DES).Value = Trim$(Me.txtDescricao.Value)
+    ws.Cells(lin, P_UNI).Value = Txt(Me.cboUnidade.Value)
+    ws.Cells(lin, P_CUS).Value = Num(Me.txtCusto.Value)
+    ws.Cells(lin, P_MAR).Value = Num(Me.txtMargem.Value)
+    ws.Cells(lin, P_VAR).Value = Num(Me.txtVarejo.Value)
+    ws.Cells(lin, P_ATA).Value = Num(Me.txtAtacado.Value)
+    ws.Cells(lin, P_CAR).Value = Num(Me.txtCartao.Value)
+    ws.Cells(lin, P_EST).Value = Num(Me.txtEstoque.Value)
+    ws.Cells(lin, P_MIN).Value = Num(Me.txtEstoqueMin.Value)
+    ws.Cells(lin, P_FOR).Value = Me.txtFornecedor.Value
+    If IsDate(Me.txtValidade.Value) Then ws.Cells(lin, P_VAL).Value = CDate(Me.txtValidade.Value)
+    ws.Cells(lin, P_FOT).Value = Me.txtFoto.Value
+
+    Turbo False
+    mLinhaAtual = lin
+    CarregarLista_Produtos ""
+    MsgBox "Produto salvo com sucesso.", vbInformation
+    Exit Sub
+ErrorHandler:
+    Turbo False
+    LogErro "frmCadastroProdutos.cmdSalvar", Err.Description
+    MsgBox "Erro ao salvar: " & Err.Description, vbCritical
+End Sub
+
+Private Sub cmdExcluir_Click()
+    Dim ws As Worksheet
+    On Error GoTo ErrorHandler
+    If mLinhaAtual = 0 Then MsgBox "Selecione um produto na lista.", vbExclamation: Exit Sub
+    Set ws = Aba(SH_PROD)
+    If MsgBox("Confirma a exclusao de " & ws.Cells(mLinhaAtual, P_DES).Value & "?", _
+              vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+    ws.Rows(mLinhaAtual).Delete
+    NovoRegistro
+    MsgBox "Produto excluido.", vbInformation
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.cmdExcluir", Err.Description
+End Sub
+
+'=====================================================================
+' DUPLICAR CADASTRO
+'=====================================================================
+Private Sub cmdDuplicar_Click()
+    Dim nova As Long
+    On Error GoTo ErrorHandler
+    If mLinhaAtual = 0 Then
+        MsgBox "Selecione o produto que deseja duplicar.", vbExclamation: Exit Sub
+    End If
+    nova = modCadastros.DuplicarProduto(mLinhaAtual)
+    If nova > 0 Then
+        CarregarLista_Produtos ""
+        CarregarRegistro nova
+        Me.txtDescricao.SetFocus
+        MsgBox "Cadastro duplicado. Ajuste a descricao e o codigo de barras.", vbInformation
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.cmdDuplicar", Err.Description
+End Sub
+
+'=====================================================================
+' AJUSTE MANUAL DE ESTOQUE
+'=====================================================================
+Private Sub cmdAjusteEstoque_Click()
+    Dim novaQtd As String, motivo As String
+    On Error GoTo ErrorHandler
+    If mLinhaAtual = 0 Then MsgBox "Selecione um produto.", vbExclamation: Exit Sub
+
+    novaQtd = InputBox("Estoque atual: " & Me.txtEstoque.Value & vbCrLf & _
+                       "Informe a nova quantidade contada:", "Ajuste de estoque", _
+                       CStr(Me.txtEstoque.Value))
+    If novaQtd = "" Then Exit Sub
+    motivo = InputBox("Motivo do ajuste (inventario, perda, quebra...):", "Ajuste de estoque")
+
+    modCadastros.AjustarEstoque CStr(Me.txtCodigo.Value), Num(novaQtd), motivo
+    Me.txtEstoque.Value = Format$(Num(novaQtd), "#,##0.000")
+    MsgBox "Estoque ajustado e registrado no historico.", vbInformation
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.cmdAjusteEstoque", Err.Description
+End Sub
+
+'=====================================================================
+' FOTO E ETIQUETA
+'=====================================================================
+Private Sub cmdFoto_Click()
+    Dim fd As Object
+    On Error GoTo ErrorHandler
+    Set fd = Application.FileDialog(3)          ' 3 = msoFileDialogFilePicker
+    fd.Title = "Selecione a foto do produto"
+    fd.Filters.Clear
+    fd.Filters.Add "Imagens", "*.jpg; *.jpeg; *.png; *.bmp; *.gif"
+    If fd.Show = -1 Then
+        Me.txtFoto.Value = fd.SelectedItems(1)
+        CarregarFoto CStr(Me.txtFoto.Value)
+    End If
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.cmdFoto", Err.Description
+End Sub
+
+Private Sub cmdEtiqueta_Click()
+    On Error GoTo ErrorHandler
+    If Trim$(Me.txtCodigo.Value) = "" Then Exit Sub
+    modImpressao.GerarEtiquetas CStr(Me.txtCodigo.Value), CStr(Me.txtCodigo.Value), 1
+    Exit Sub
+ErrorHandler:
+    LogErro "frmCadastroProdutos.cmdEtiqueta", Err.Description
+End Sub
+
+'=====================================================================
+' PESQUISA
+'=====================================================================
+Private Sub cmdPesquisar_Click()
+    CarregarLista_Produtos CStr(Me.txtPesquisa.Value)
+End Sub
+
+Private Sub txtPesquisa_Change()
+    CarregarLista_Produtos CStr(Me.txtPesquisa.Value)
+End Sub
+
+Private Sub cmdFechar_Click()
+    Unload Me
+End Sub
