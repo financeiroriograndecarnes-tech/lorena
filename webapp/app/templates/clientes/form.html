@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if cliente else "Novo" }} Cliente - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>{{ "Editar cliente" if cliente else "Novo cliente" }}{% if cliente %} — Nº {{ cliente['id'] }}{% endif %}</h1>
+
+<form method="post" class="card">
+  <div class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Nome *</label>
+      <input type="text" name="nome" required value="{{ cliente['nome'] if cliente else '' }}">
+    </div>
+  </div>
+
+  <div class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Responsavel</label>
+      <input type="text" name="responsavel" value="{{ cliente['responsavel'] if cliente else '' }}">
+    </div>
+    <div class="campo" style="flex:2">
+      <label>Tutor/Professor(a)</label>
+      <input type="text" name="tutor" value="{{ cliente['tutor'] if cliente else '' }}">
+    </div>
+  </div>
+
+  <div class="linha-campos">
+    <div class="campo">
+      <label>Telefone</label>
+      <input type="tel" name="telefone" value="{{ cliente['telefone'] if cliente else '' }}">
+    </div>
+    <div class="campo">
+      <label>Celular</label>
+      <input type="tel" name="celular" value="{{ cliente['celular'] if cliente else '' }}">
+    </div>
+    <div class="campo">
+      <label>Turma</label>
+      <input type="text" name="turma" value="{{ cliente['turma'] if cliente else '' }}">
+    </div>
+  </div>
+
+  <div class="linha-campos">
+    <div class="campo">
+      <label>Limite de credito (R$)</label>
+      <input type="number" step="0.01" name="limite_credito" value="{{ cliente['limite_credito'] if cliente else 0 }}">
+    </div>
+    <div class="campo">
+      <label>Status</label>
+      <select name="status">
+        <option value="Ativo" {{ "selected" if cliente and cliente['status']=='Ativo' }}>Ativo</option>
+        <option value="Bloqueado" {{ "selected" if cliente and cliente['status']=='Bloqueado' }}>Bloqueado</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Permite a prazo?</label>
+      <select name="permite_a_prazo">
+        <option value="Nao" {{ "selected" if cliente and cliente['permite_a_prazo']=='Nao' }}>Nao</option>
+        <option value="Sim" {{ "selected" if cliente and cliente['permite_a_prazo']=='Sim' }}>Sim</option>
+      </select>
+    </div>
+  </div>
+
+  {% if cliente %}
+  <p style="color:var(--cor-texto-suave)">
+    Saldo devedor atual: <strong>R$ {{ "%.2f"|format(saldo) }}</strong> ·
+    Credito disponivel: <strong>R$ {{ "%.2f"|format(cliente['limite_credito'] - saldo) }}</strong>
+  </p>
+  {% endif %}
+
+  <div class="botoes">
+    <button type="submit" class="btn-verde btn-grande">Salvar</button>
+    <a href="{{ url_for('clientes.lista') }}" class="btn btn-secundario btn-grande">Cancelar</a>
+    {% if cliente %}
+    <form method="post" action="{{ url_for('clientes.excluir', cliente_id=cliente['id']) }}"
+          onsubmit="return confirm('Excluir este cliente?')" style="margin-left:auto">
+      <button type="submit" class="btn-cinza btn-grande">Excluir</button>
+    </form>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

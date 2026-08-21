@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}PDV - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>PDV — Ponto de Venda</h1>
+
+{% if not caixa_aberto %}
+<div class="flash flash-erro">
+  O caixa de hoje esta FECHADO. <a href="{{ url_for('caixa.tela') }}">Abrir caixa</a> antes de vender.
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Codigo de barras / codigo do produto</label>
+      <input type="text" id="in-codigo" autocomplete="off" placeholder="Bipe ou digite o codigo e Enter">
+    </div>
+    <div class="campo" style="flex:1">
+      <label>Qtd</label>
+      <input type="number" id="in-qtd" value="1" step="0.001">
+    </div>
+    <div class="campo" style="flex:1">
+      <label>Tabela</label>
+      <select id="in-tabela">
+        <option value="VAREJO">Varejo</option>
+        <option value="ATACADO">Atacado</option>
+        <option value="CARTAO">Cartao</option>
+      </select>
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button id="btn-adicionar" class="btn-grande">Adicionar</button>
+    </div>
+  </div>
+  <div id="msg-produto" style="color:var(--cor-texto-suave)"></div>
+</div>
+
+<div class="card">
+  <div class="linha-campos">
+    <div class="campo" style="flex:1">
+      <label>Cliente nº</label>
+      <input type="text" id="in-cliente-cod" placeholder="Numero de cadastro">
+    </div>
+    <div class="campo" style="flex:2">
+      <label>Nome</label>
+      <input type="text" id="in-cliente-nome" value="CONSUMIDOR">
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button id="btn-buscar-cliente" class="btn btn-secundario">Buscar...</button>
+    </div>
+  </div>
+  <div id="lista-busca-cliente" class="tabela-scroll" style="display:none; max-height:260px; overflow-y:auto;"></div>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead><tr><th>Descricao</th><th>Qtd</th><th>Unit.</th><th>Total</th><th></th></tr></thead>
+    <tbody id="tbody-itens"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="linha-campos">
+    <div class="campo">
+      <label>Desconto (R$)</label>
+      <input type="number" step="0.01" id="in-desconto" value="0">
+    </div>
+    <div class="campo">
+      <label>Forma pagto. 1</label>
+      <select id="in-fp1">
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="CARTAO CREDITO">CARTAO CREDITO</option>
+        <option value="CARTAO DEBITO">CARTAO DEBITO</option>
+        <option value="PIX">PIX</option>
+        <option value="BOLETO">BOLETO</option>
+        <option value="CHEQUE">CHEQUE</option>
+        <option value="A PRAZO">A PRAZO</option>
+        <option value="VALE">VALE</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Valor pagto. 1</label>
+      <input type="number" step="0.01" id="in-vp1" value="0">
+    </div>
+    <div class="campo">
+      <label>Forma pagto. 2</label>
+      <select id="in-fp2">
+        <option value="">-</option>
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="CARTAO CREDITO">CARTAO CREDITO</option>
+        <option value="CARTAO DEBITO">CARTAO DEBITO</option>
+        <option value="PIX">PIX</option>
+        <option value="BOLETO">BOLETO</option>
+        <option value="CHEQUE">CHEQUE</option>
+        <option value="A PRAZO">A PRAZO</option>
+        <option value="VALE">VALE</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Valor pagto. 2</label>
+      <input type="number" step="0.01" id="in-vp2" value="0">
+    </div>
+    <div class="campo">
+      <label>Parcelas (se a prazo)</label>
+      <input type="number" id="in-parcelas" value="1" min="1">
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div style="font-size:1.1rem;">
+      <div>SUBTOTAL: <strong id="lbl-subtotal">R$ 0,00</strong></div>
+      <div>TROCO: <strong id="lbl-troco">R$ 0,00</strong></div>
+    </div>
+    <div style="font-size:2rem; font-weight:800; color:var(--cor-primaria);" id="lbl-total">TOTAL: R$ 0,00</div>
+  </div>
+
+  <div class="botoes">
+    <button id="btn-finalizar" class="btn-verde btn-grande">FINALIZAR VENDA</button>
+    <button id="btn-orcamento" class="btn btn-secundario">Salvar orcamento</button>
+    <button id="btn-limpar" class="btn btn-cinza">Cancelar venda</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pdv.js') }}"></script>
+{% endblock %}

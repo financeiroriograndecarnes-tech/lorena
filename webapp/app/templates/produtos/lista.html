@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Produtos - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Produtos</h1>
+
+<div class="card">
+  <form method="get" class="linha-campos">
+    <div class="campo" style="flex:3">
+      <label>Buscar</label>
+      <input type="search" name="q" value="{{ busca }}" placeholder="Descricao ou codigo de barras">
+    </div>
+    <div class="campo" style="flex:1; align-self:flex-end;">
+      <button type="submit" class="btn-grande" style="width:100%">Buscar</button>
+    </div>
+  </form>
+</div>
+
+<div class="botoes" style="margin-bottom:16px;">
+  <a href="{{ url_for('produtos.novo') }}" class="btn btn-verde btn-grande">+ Novo produto</a>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Descricao</th>
+        <th>Un.</th>
+        <th>Varejo</th>
+        <th>Estoque</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in produtos %}
+      <tr class="linha-clicavel" onclick="window.location='{{ url_for('produtos.editar', produto_id=p['id']) }}'">
+        <td>{{ p['descricao'] }}</td>
+        <td>{{ p['unidade'] }}</td>
+        <td>R$ {{ "%.2f"|format(p['preco_varejo']) }}</td>
+        <td>
+          {% if p['estoque_atual'] <= p['estoque_minimo'] %}
+            <span class="badge badge-vermelho">{{ "%.3f"|format(p['estoque_atual']) }}</span>
+          {% else %}
+            {{ "%.3f"|format(p['estoque_atual']) }}
+          {% endif %}
+        </td>
+        <td onclick="event.stopPropagation()">
+          <a href="{{ url_for('produtos.editar', produto_id=p['id']) }}" class="btn btn-secundario">Editar</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Nenhum produto encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

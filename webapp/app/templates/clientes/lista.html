@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Clientes - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Clientes</h1>
+
+<div class="card">
+  <form method="get" class="linha-campos">
+    <div class="campo" style="flex:3">
+      <label>Buscar</label>
+      <input type="search" name="q" value="{{ busca }}" placeholder="Nome, responsavel, turma ou celular">
+    </div>
+    <div class="campo" style="flex:1; align-self:flex-end;">
+      <button type="submit" class="btn-grande" style="width:100%">Buscar</button>
+    </div>
+  </form>
+</div>
+
+<div class="botoes" style="margin-bottom:16px;">
+  <a href="{{ url_for('clientes.novo') }}" class="btn btn-verde btn-grande">+ Novo cliente</a>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Nº</th>
+        <th>Nome</th>
+        <th>Responsavel</th>
+        <th>Turma</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clientes %}
+      <tr class="linha-clicavel" onclick="window.location='{{ url_for('clientes.editar', cliente_id=c['id']) }}'">
+        <td>{{ c['id'] }}</td>
+        <td>{{ c['nome'] }}</td>
+        <td>{{ c['responsavel'] or '' }}</td>
+        <td>{{ c['turma'] or '' }}</td>
+        <td>
+          {% if c['status'] == 'Bloqueado' %}
+            <span class="badge badge-vermelho">Bloqueado</span>
+          {% else %}
+            <span class="badge badge-verde">Ativo</span>
+          {% endif %}
+        </td>
+        <td onclick="event.stopPropagation()">
+          <a href="{{ url_for('clientes.editar', cliente_id=c['id']) }}" class="btn btn-secundario">Editar</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Nenhum cliente encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

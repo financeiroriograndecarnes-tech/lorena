@@ -1,0 +1,150 @@
+/* =====================================================================
+   Sistema Lorena (web) | Estilo base -- pensado para toque em tablet
+   Botoes e campos grandes, alto contraste, sem hover-dependencia.
+   ===================================================================== */
+
+:root {
+  --cor-primaria: #b91c1c;
+  --cor-primaria-escura: #7f1010;
+  --cor-fundo: #f4f4f5;
+  --cor-card: #ffffff;
+  --cor-texto: #1f2023;
+  --cor-texto-suave: #6b7280;
+  --cor-borda: #d4d4d8;
+  --cor-verde: #15803d;
+  --cor-amarelo: #a16207;
+  --cor-azul: #1d4ed8;
+  --toque-min: 52px;         /* altura minima de alvo de toque */
+  --fonte-base: 19px;
+  --raio: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: var(--fonte-base);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+/* ---------- topo / navegacao ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--cor-primaria);
+  color: #fff;
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-brand { font-size: 1.3rem; font-weight: 700; letter-spacing: .03em; }
+.topbar-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.topbar-nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: var(--raio);
+  font-weight: 600;
+  font-size: 1.05rem;
+  min-height: var(--toque-min);
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,.12);
+}
+.topbar-nav a.active { background: #fff; color: var(--cor-primaria); }
+
+/* ---------- layout geral ---------- */
+.content { padding: 16px; max-width: 1400px; margin: 0 auto; }
+
+.card {
+  background: var(--cor-card);
+  border-radius: var(--raio);
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+h1 { font-size: 1.7rem; margin: 0 0 16px; }
+h2 { font-size: 1.3rem; margin: 0 0 12px; }
+
+/* ---------- formularios ---------- */
+label { display: block; font-weight: 600; margin-bottom: 6px; font-size: .95rem; color: var(--cor-texto-suave); }
+
+input[type=text], input[type=number], input[type=search], input[type=tel],
+input[type=password], select, textarea {
+  width: 100%;
+  min-height: var(--toque-min);
+  font-size: 1.1rem;
+  padding: 10px 14px;
+  border: 2px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: #fff;
+  color: var(--cor-texto);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--cor-primaria);
+}
+
+.campo { margin-bottom: 14px; }
+.linha-campos { display: flex; gap: 14px; flex-wrap: wrap; }
+.linha-campos > .campo { flex: 1 1 200px; }
+
+/* ---------- botoes ---------- */
+button, .btn {
+  min-height: var(--toque-min);
+  padding: 12px 22px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: var(--raio);
+  border: none;
+  cursor: pointer;
+  background: var(--cor-primaria);
+  color: #fff;
+  touch-action: manipulation;
+}
+button:active, .btn:active { background: var(--cor-primaria-escura); }
+.btn-secundario { background: #e4e4e7; color: var(--cor-texto); }
+.btn-verde { background: var(--cor-verde); }
+.btn-cinza { background: #71717a; }
+.btn-grande { font-size: 1.4rem; padding: 20px 30px; min-height: 68px; }
+.botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ---------- tabelas / listas ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--cor-borda); font-size: 1rem; }
+th { color: var(--cor-texto-suave); font-size: .9rem; text-transform: uppercase; letter-spacing: .03em; }
+tr.linha-clicavel { cursor: pointer; }
+tr.linha-clicavel:active { background: #f4f4f5; }
+
+.tabela-scroll { overflow-x: auto; }
+
+/* ---------- badges / status ---------- */
+.badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; }
+.badge-verde { background: #dcfce7; color: var(--cor-verde); }
+.badge-vermelho { background: #fee2e2; color: var(--cor-primaria); }
+.badge-amarelo { background: #fef3c7; color: var(--cor-amarelo); }
+.badge-azul { background: #dbeafe; color: var(--cor-azul); }
+
+/* ---------- mensagens ---------- */
+.flash-stack { margin-bottom: 16px; }
+.flash { padding: 12px 16px; border-radius: var(--raio); margin-bottom: 8px; font-weight: 600; }
+.flash-sucesso { background: #dcfce7; color: var(--cor-verde); }
+.flash-erro { background: #fee2e2; color: var(--cor-primaria); }
+.flash-aviso { background: #fef3c7; color: var(--cor-amarelo); }
+
+/* ---------- responsivo ---------- */
+@media (max-width: 720px) {
+  :root { --fonte-base: 17px; }
+  .topbar { flex-direction: column; align-items: stretch; }
+  .topbar-nav { justify-content: stretch; }
+  .topbar-nav a { flex: 1; justify-content: center; }
+}

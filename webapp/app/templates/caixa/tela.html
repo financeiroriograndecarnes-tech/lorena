@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Caixa - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Caixa</h1>
+
+<div class="card">
+  {% if aberto %}
+    <span class="badge badge-verde" style="font-size:1.1rem;">CAIXA ABERTO</span>
+  {% else %}
+    <span class="badge badge-vermelho" style="font-size:1.1rem;">CAIXA FECHADO</span>
+  {% endif %}
+  <p style="margin:14px 0 0;">Total movimentado hoje: <strong>R$ {{ "%.2f"|format(total_dia) }}</strong></p>
+  <p>Esperado em dinheiro na gaveta: <strong>R$ {{ "%.2f"|format(esperado_dinheiro) }}</strong></p>
+</div>
+
+{% if not aberto %}
+<div class="card">
+  <h2>Abrir caixa</h2>
+  <form method="post" action="{{ url_for('caixa.abrir') }}" class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Fundo de troco (R$)</label>
+      <input type="number" step="0.01" name="valor" value="0" required>
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button type="submit" class="btn-verde btn-grande">Abrir caixa</button>
+    </div>
+  </form>
+</div>
+{% else %}
+<div class="card">
+  <h2>Sangria / Suprimento</h2>
+  <div class="linha-campos">
+    <form method="post" action="{{ url_for('caixa.sangria') }}" class="linha-campos" style="flex:1">
+      <div class="campo" style="flex:1">
+        <label>Sangria (R$)</label>
+        <input type="number" step="0.01" name="valor" required>
+      </div>
+      <div class="campo" style="flex:2">
+        <label>Motivo</label>
+        <input type="text" name="motivo" required>
+      </div>
+      <div class="campo" style="align-self:flex-end;">
+        <button type="submit" class="btn-cinza">Sangria</button>
+      </div>
+    </form>
+  </div>
+  <div class="linha-campos">
+    <form method="post" action="{{ url_for('caixa.suprimento') }}" class="linha-campos" style="flex:1">
+      <div class="campo" style="flex:1">
+        <label>Suprimento (R$)</label>
+        <input type="number" step="0.01" name="valor" required>
+      </div>
+      <div class="campo" style="flex:2">
+        <label>Motivo</label>
+        <input type="text" name="motivo" required>
+      </div>
+      <div class="campo" style="align-self:flex-end;">
+        <button type="submit" class="btn-secundario">Suprimento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Resumo por forma de pagamento (hoje)</h2>
+  <div class="linha-campos">
+    {% for forma, valor in resumo.items() %}
+    <div class="campo" style="flex:1 1 150px;">
+      <label>{{ forma }}</label>
+      <div style="font-size:1.2rem; font-weight:700;">R$ {{ "%.2f"|format(valor) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Fechar caixa</h2>
+  <form method="post" action="{{ url_for('caixa.fechar') }}" class="linha-campos"
+        onsubmit="return confirm('Confirma o FECHAMENTO do caixa?')">
+    <div class="campo" style="flex:2">
+      <label>Valor contado na gaveta (R$)</label>
+      <input type="number" step="0.01" name="apurado" required>
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button type="submit" class="btn btn-grande" style="background:#7f1010;">Fechar caixa</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<div class="card tabela-scroll">
+  <h2>Movimentos de hoje</h2>
+  <table>
+    <thead><tr><th>Hora</th><th>Tipo</th><th>Forma</th><th>Valor</th><th>Observacao</th></tr></thead>
+    <tbody>
+      {% for m in movimentos %}
+      <tr>
+        <td>{{ m['data_hora'][11:16] }}</td>
+        <td>{{ m['tipo'] }}</td>
+        <td>{{ m['forma_pagamento'] }}</td>
+        <td>R$ {{ "%.2f"|format(m['valor']) }}</td>
+        <td>{{ m['observacao'] or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Nenhum movimento hoje.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
