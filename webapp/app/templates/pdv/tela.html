@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}PDV - {{ app_nome }}{% endblock %}
 {% block content %}
-<h1>PDV — Ponto de Venda</h1>
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+  <h1 style="margin:0;">PDV — Ponto de Venda</h1>
+  <a href="{{ url_for('pdv.vendas') }}" class="btn btn-secundario">Histórico de vendas</a>
+</div>
 
 {% if not caixa_aberto %}
 <div class="flash flash-erro">

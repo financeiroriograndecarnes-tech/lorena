@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Etiquetas</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+  .barra-acoes { text-align: center; padding: 10px; }
+  .barra-acoes button { font-size: 16px; padding: 10px 20px; margin: 4px; }
+  .grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .etiqueta {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+  .etiqueta .descricao { font-size: 11px; height: 28px; overflow: hidden; }
+  .etiqueta .preco { font-size: 14px; font-weight: bold; margin: 2px 0; }
+  .etiqueta svg { width: 100%; height: 40px; }
+  .etiqueta .codigo { font-size: 10px; }
+  @media print {
+    .barra-acoes { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra-acoes">
+  <button onclick="window.print()">Imprimir</button>
+  <button onclick="window.close()">Fechar</button>
+</div>
+
+{% if not etiquetas %}
+<p style="text-align:center;">Nenhum produto encontrado nesse intervalo.</p>
+{% else %}
+<div class="grade">
+  {% for e in etiquetas %}
+  <div class="etiqueta">
+    <div class="descricao">{{ e.descricao }}</div>
+    <div class="preco">R$ {{ "%.2f"|format(e.preco) }} / {{ e.unidade }}</div>
+    {{ e.svg | safe }}
+    <div class="codigo">{{ e.codigo }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+</body>
+</html>

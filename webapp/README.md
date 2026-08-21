@@ -47,9 +47,15 @@ Paleta de cores neutra (cinza-azulado) em todo o sistema; vermelho fica
 reservado só para ações de atenção (excluir, cancelar) e badges de
 status (vencido/bloqueado).
 
-## Próximas fases (ainda não construídas)
+- **Impressão**: cupom (58/80mm) e carnê/promissória A4 direto da venda
+  (ou reimpresso depois pelo histórico/Contas a Receber), e etiquetas de
+  código de barras (Code128, gerado em SVG, sem precisar de fonte
+  especial instalada). Usa a função de imprimir do próprio navegador
+  (Ctrl+P) — funciona igual no computador e no tablet.
+- **Histórico de vendas** (`/pdv/vendas`) para reimprimir cupons antigos.
 
-- Impressão de cupom/carnê e etiquetas de código de barras.
+## Próxima fase (ainda não construída)
+
 - Deploy na nuvem (hospedagem a definir com o usuário).
 
 ## Estrutura

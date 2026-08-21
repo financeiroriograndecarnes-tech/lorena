@@ -20,7 +20,7 @@ def create_app(test_config=None):
 
     db_module.init_app(app)
 
-    from .routes import produtos, clientes, caixa, pdv, config, receber, pagar, dashboard
+    from .routes import produtos, clientes, caixa, pdv, config, receber, pagar, dashboard, impressao
 
     app.register_blueprint(produtos.bp)
     app.register_blueprint(clientes.bp)
@@ -30,6 +30,7 @@ def create_app(test_config=None):
     app.register_blueprint(receber.bp)
     app.register_blueprint(pagar.bp)
     app.register_blueprint(dashboard.bp)
+    app.register_blueprint(impressao.bp)
 
     @app.route("/")
     def index():

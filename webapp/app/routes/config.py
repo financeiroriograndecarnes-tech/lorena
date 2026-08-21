@@ -12,6 +12,8 @@ CAMPOS = [
     ("PERC_ATACADO", "% desconto no atacado (sobre o varejo)"),
     ("PERC_CARTAO", "% acrescimo no cartao (sobre o varejo)"),
     ("USUARIO_PADRAO", "Usuario padrao sugerido no PDV"),
+    ("LARGURA_CUPOM", "Largura da bobina termica (58 ou 80)"),
+    ("INTERVALO_PARCELAS", "Dias entre parcelas do carne"),
 ]
 
 

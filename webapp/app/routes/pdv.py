@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, render_template, request
 
 from ..db import get_db
 from .caixa import caixa_aberto, registrar_movimento
+from .config import get_config
 
 bp = Blueprint("pdv", __name__, url_prefix="/pdv")
 
@@ -13,6 +14,20 @@ def tela():
     db = get_db()
     aberto = caixa_aberto(db)
     return render_template("pdv/tela.html", active="pdv", caixa_aberto=aberto)
+
+
+@bp.route("/vendas")
+def vendas():
+    db = get_db()
+    busca = request.args.get("q", "").strip()
+    query = "SELECT * FROM vendas WHERE 1=1"
+    params = []
+    if busca:
+        query += " AND (cliente_nome LIKE ? OR CAST(id AS TEXT) = ?)"
+        params += [f"%{busca}%", busca]
+    query += " ORDER BY data_hora DESC LIMIT 200"
+    lista = db.execute(query, params).fetchall()
+    return render_template("pdv/vendas.html", active="pdv", vendas=lista, busca=busca)
 
 
 @bp.route("/produto.json")
@@ -106,6 +121,7 @@ def finalizar():
                 (item["qtd"], item["produto_id"]),
             )
 
+    a_prazo = False
     if status == "Concluida":
         if vp1 > 0:
             valor_caixa = (vp1 - troco) if fp1.upper() == "DINHEIRO" else vp1
@@ -114,11 +130,12 @@ def finalizar():
             registrar_movimento(db, "Venda", vp2, fp2, f"Venda #{venda_id}", vendedor)
 
         if fp1.upper() == "A PRAZO" or fp2.upper() == "A PRAZO":
+            a_prazo = True
             valor_prazo = (vp1 if fp1.upper() == "A PRAZO" else 0) + (vp2 if fp2.upper() == "A PRAZO" else 0)
             _gerar_parcelas(db, venda_id, cliente_id, valor_prazo, n_parcelas)
 
     db.commit()
-    return jsonify({"ok": True, "venda_id": venda_id})
+    return jsonify({"ok": True, "venda_id": venda_id, "a_prazo": a_prazo})
 
 
 def _validar_venda_a_prazo(db, cliente_id, valor):
@@ -152,6 +169,7 @@ def _validar_venda_a_prazo(db, cliente_id, valor):
 def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
     n_parcelas = max(1, n_parcelas)
     valor_parcela = round(valor_total / n_parcelas, 2)
+    intervalo = int(float(get_config(db).get("INTERVALO_PARCELAS", 30) or 30))
     soma = 0
     for i in range(n_parcelas):
         if i < n_parcelas - 1:
@@ -162,5 +180,5 @@ def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
         db.execute(
             """INSERT INTO contas_receber (venda_id, cliente_id, vencimento, valor_parcela, status)
                VALUES (?, ?, date('now', ?), ?, 'Em Aberto')""",
-            (venda_id, cliente_id, f"+{30 * (i + 1)} days", valor),
+            (venda_id, cliente_id, f"+{intervalo * (i + 1)} days", valor),
         )

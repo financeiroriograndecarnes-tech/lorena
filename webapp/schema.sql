@@ -114,4 +114,6 @@ INSERT OR IGNORE INTO config (chave, valor, descricao) VALUES
     ('USUARIO_PADRAO', 'OPERADOR', 'Usuario sugerido na abertura'),
     ('JUROS_DIA', '0.0333', '%% de juros por dia de atraso'),
     ('MULTA_PERC', '2', '%% de multa fixa sobre parcela vencida'),
-    ('DIAS_TOLERANCIA', '0', 'Dias de tolerancia antes de cobrar juros/multa');
+    ('DIAS_TOLERANCIA', '0', 'Dias de tolerancia antes de cobrar juros/multa'),
+    ('LARGURA_CUPOM', '80', 'Largura da bobina termica em mm: 58 ou 80'),
+    ('INTERVALO_PARCELAS', '30', 'Dias entre parcelas do carne');

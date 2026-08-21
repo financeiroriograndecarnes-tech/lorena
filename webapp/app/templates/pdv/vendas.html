@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Vendas - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Histórico de vendas</h1>
+
+<div class="card">
+  <form method="get" class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Buscar</label>
+      <input type="search" name="q" value="{{ busca }}" placeholder="Cliente ou número da venda">
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button type="submit" class="btn-grande">Buscar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for v in vendas %}
+      <tr>
+        <td>{{ v['id'] }}</td>
+        <td>{{ v['data_hora'][:16] }}</td>
+        <td>{{ v['cliente_nome'] }}</td>
+        <td>R$ {{ "%.2f"|format(v['total_liquido']) }}</td>
+        <td>
+          {% if v['status'] == 'Cancelada' %}<span class="badge badge-vermelho">Cancelada</span>
+          {% elif v['status'] == 'Orcamento' %}<span class="badge badge-neutro">Orçamento</span>
+          {% elif v['status'] == 'Consignado' %}<span class="badge badge-azul">Consignado</span>
+          {% else %}<span class="badge badge-verde">Concluída</span>{% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('impressao.cupom', venda_id=v['id']) }}" target="_blank" class="btn btn-secundario">Cupom</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Nenhuma venda encontrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

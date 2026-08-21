@@ -176,7 +176,12 @@
       alert("Erro: " + dados.erro);
       return;
     }
-    alert("Venda #" + dados.venda_id + " registrada com sucesso.");
+    if (confirm("Venda #" + dados.venda_id + " registrada com sucesso.\n\nImprimir comprovante?")) {
+      window.open("/impressao/vendas/" + dados.venda_id + "/cupom", "_blank");
+    }
+    if (dados.a_prazo && confirm("Gerar carnê / promissória desta venda?")) {
+      window.open("/impressao/vendas/" + dados.venda_id + "/carne", "_blank");
+    }
     limparVenda();
   }
 

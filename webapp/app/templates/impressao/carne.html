@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carnê - Venda #{{ venda['id'] if venda else '' }}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; margin: 0; padding: 20px; }
+  .barra-acoes { text-align: center; padding: 10px; }
+  .barra-acoes button { font-size: 16px; padding: 10px 20px; margin: 4px; }
+  .parcela {
+    border: 1px dashed #666;
+    padding: 16px;
+    margin-bottom: 18px;
+    page-break-inside: avoid;
+  }
+  .cabecalho { display: flex; justify-content: space-between; align-items: baseline; }
+  .empresa { font-size: 16px; font-weight: bold; }
+  .numero { font-weight: bold; }
+  .campo { margin: 6px 0; }
+  .valor { font-size: 15px; font-weight: bold; }
+  .assinatura { margin-top: 30px; }
+  .linha-assinatura { border-top: 1px solid #000; width: 300px; margin-top: 30px; }
+  @media print {
+    .barra-acoes { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra-acoes">
+  <button onclick="window.print()">Imprimir</button>
+  <button onclick="window.close()">Fechar</button>
+</div>
+
+{% if not venda or total == 0 %}
+<p>Nenhuma parcela encontrada para esta venda.</p>
+{% else %}
+{% for p in parcelas %}
+<div class="parcela">
+  <div class="cabecalho">
+    <span class="empresa">{{ cfg.get('NOME_EMPRESA','') or 'EMPRESA' }}</span>
+    <span class="numero">PARCELA {{ loop.index }}/{{ total }}</span>
+  </div>
+  <div>{{ cfg.get('CNPJ','') }} {{ cfg.get('TELEFONE','') }}</div>
+  <p><strong>PROMISSÓRIA / CARNÊ</strong></p>
+  <div class="campo">Venda nº: {{ venda['id'] }}</div>
+  <div class="campo">Parcela nº: {{ p['id'] }}</div>
+  <div class="campo">Emitente: {{ venda['cliente_nome'] }}</div>
+  <div class="campo">Vencimento: {{ p['vencimento'] }}</div>
+  <div class="campo valor">Valor: R$ {{ "%.2f"|format(p['valor_parcela']) }}</div>
+  <p>
+    Aos {{ p['vencimento'] }} pagarei por esta única via de PROMISSÓRIA a quantia de
+    R$ {{ "%.2f"|format(p['valor_parcela']) }}.
+  </p>
+  <p style="font-size:11px; color:#555;">
+    Após o vencimento: multa de {{ cfg.get('MULTA_PERC','2') }}% + juros de {{ cfg.get('JUROS_DIA','0,0333') }}% ao dia.
+  </p>
+  <div class="assinatura">
+    <div class="linha-assinatura"></div>
+    <div>Assinatura do emitente</div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+</body>
+</html>

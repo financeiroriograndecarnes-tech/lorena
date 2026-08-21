@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cupom #{{ venda['id'] if venda else '' }}</title>
+<style>
+  body { font-family: "Courier New", monospace; font-size: 12px; margin: 0; padding: 8px; }
+  .cupom { width: {{ '58mm' if largura <= 58 else '80mm' }}; margin: 0 auto; }
+  .centro { text-align: center; }
+  .negrito { font-weight: bold; }
+  .linha { border-top: 1px dashed #000; margin: 4px 0; }
+  .item-linha { display: flex; justify-content: space-between; }
+  .barra-acoes { text-align: center; padding: 10px; }
+  .barra-acoes button { font-size: 16px; padding: 10px 20px; margin: 4px; }
+  @media print {
+    .barra-acoes { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra-acoes">
+  <button onclick="window.print()">Imprimir</button>
+  <button onclick="window.close()">Fechar</button>
+</div>
+
+{% if not venda %}
+<p class="centro">Venda não encontrada.</p>
+{% else %}
+<div class="cupom">
+  <p class="centro negrito">{{ cfg.get('NOME_EMPRESA','') or 'EMPRESA' }}</p>
+  {% if cfg.get('CNPJ') %}<p class="centro">CNPJ: {{ cfg['CNPJ'] }}</p>{% endif %}
+  {% if cfg.get('ENDERECO') %}<p class="centro">{{ cfg['ENDERECO'] }}</p>{% endif %}
+  {% if cfg.get('TELEFONE') %}<p class="centro">Fone: {{ cfg['TELEFONE'] }}</p>{% endif %}
+  <div class="linha"></div>
+  <p class="centro negrito">DOCUMENTO NÃO FISCAL</p>
+  <div class="linha"></div>
+  <p>VENDA: {{ venda['id'] }} &nbsp; {{ venda['data_hora'][:16] }}</p>
+  <p>CLIENTE: {{ venda['cliente_nome'] }}</p>
+  <p>VENDEDOR: {{ venda['vendedor'] or '' }}</p>
+  <div class="linha"></div>
+  {% for it in itens %}
+  <p>{{ "%03d"|format(loop.index) }} {{ it['descricao'] }}</p>
+  <p class="item-linha">
+    <span>{{ "%.3f"|format(it['qtd']) }} x {{ "%.2f"|format(it['preco_unit']) }}</span>
+    <span>{{ "%.2f"|format(it['total_item']) }}</span>
+  </p>
+  {% endfor %}
+  <div class="linha"></div>
+  <p class="item-linha"><span>QTD. ITENS</span><span>{{ itens|length }}</span></p>
+  <p class="item-linha"><span>SUBTOTAL</span><span>{{ "%.2f"|format(venda['total_bruto']) }}</span></p>
+  {% if venda['desconto'] > 0 %}
+  <p class="item-linha"><span>DESCONTO</span><span>-{{ "%.2f"|format(venda['desconto']) }}</span></p>
+  {% endif %}
+  <p class="item-linha negrito"><span>TOTAL R$</span><span>{{ "%.2f"|format(venda['total_liquido']) }}</span></p>
+  <div class="linha"></div>
+  {% if venda['valor_pag_1'] > 0 %}
+  <p class="item-linha"><span>{{ venda['forma_pag_1'] }}</span><span>{{ "%.2f"|format(venda['valor_pag_1']) }}</span></p>
+  {% endif %}
+  {% if venda['valor_pag_2'] > 0 %}
+  <p class="item-linha"><span>{{ venda['forma_pag_2'] }}</span><span>{{ "%.2f"|format(venda['valor_pag_2']) }}</span></p>
+  {% endif %}
+  {% if venda['troco'] > 0 %}
+  <p class="item-linha"><span>TROCO</span><span>{{ "%.2f"|format(venda['troco']) }}</span></p>
+  {% endif %}
+  <div class="linha"></div>
+  {% if venda['status'] == 'Orcamento' %}
+  <p class="centro negrito">*** ORÇAMENTO ***</p>
+  <p class="centro">Validade: 3 dias</p>
+  {% elif venda['status'] == 'Consignado' %}
+  <p class="centro negrito">*** CONSIGNADO ***</p>
+  {% endif %}
+  <p class="centro">Obrigado pela preferência!</p>
+</div>
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Etiquetas - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Gerar etiquetas de código de barras</h1>
+
+<form method="post" action="{{ url_for('impressao.etiquetas') }}" target="_blank" class="card linha-campos">
+  <div class="campo">
+    <label>Código inicial (vazio = todos)</label>
+    <input type="number" name="inicial">
+  </div>
+  <div class="campo">
+    <label>Código final (vazio = todos)</label>
+    <input type="number" name="final">
+  </div>
+  <div class="campo">
+    <label>Cópias por produto</label>
+    <input type="number" name="copias" value="1" min="1">
+  </div>
+  <div class="campo" style="align-self:flex-end;">
+    <button type="submit" class="btn-grande">Gerar etiquetas</button>
+  </div>
+</form>
+<p style="color:var(--cor-texto-suave)">Abre numa aba nova, pronta pra imprimir (Ctrl+P).</p>
+{% endblock %}

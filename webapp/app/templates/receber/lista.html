@@ -49,9 +49,12 @@
           {% elif l.status_exibicao == 'Parcial' %}<span class="badge badge-azul">Parcial</span>
           {% else %}<span class="badge badge-neutro">Em aberto</span>{% endif %}
         </td>
-        <td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
           {% if l.status_exibicao != 'Pago' %}
           <button type="button" class="btn btn-secundario" onclick="document.getElementById('baixa-{{ l.row['id'] }}').style.display='block'">Baixar</button>
+          {% endif %}
+          {% if l.row['venda_id'] %}
+          <a href="{{ url_for('impressao.carne', venda_id=l.row['venda_id']) }}" target="_blank" class="btn btn-secundario">Carnê</a>
           {% endif %}
         </td>
       </tr>
