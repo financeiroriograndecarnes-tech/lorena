@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Relatório de Vendas - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Relatório de Vendas</h1>
+{% include "relatorios/_subnav.html" %}
+
+<div class="card">
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Total vendido</div><div class="valor">R$ {{ "%.2f"|format(total) }}</div></div>
+    <div class="indicador"><div class="rotulo">Nº de vendas</div><div class="valor">{{ n }}</div></div>
+    <div class="indicador"><div class="rotulo">Ticket médio</div><div class="valor">R$ {{ "%.2f"|format(ticket_medio) }}</div></div>
+  </div>
+  <p style="color:var(--cor-texto-suave); margin-top:10px;">
+    Canceladas no período: {{ canceladas['n'] }} (R$ {{ "%.2f"|format(canceladas['total']) }}) ·
+    Orçamentos em aberto: {{ orcamentos['n'] }} (R$ {{ "%.2f"|format(orcamentos['total']) }})
+  </p>
+</div>
+
+<div class="card">
+  <h2>Por forma de pagamento</h2>
+  <div class="grid-indicadores">
+    {% for forma, valor in por_forma.items() %}
+    <div class="indicador"><div class="rotulo">{{ forma }}</div><div class="valor">R$ {{ "%.2f"|format(valor) }}</div></div>
+    {% else %}
+    <p>Nenhuma venda no período.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card tabela-scroll">
+  <h2>Vendas do período</h2>
+  <table>
+    <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th></th></tr></thead>
+    <tbody>
+      {% for v in vendas %}
+      <tr>
+        <td>{{ v['id'] }}</td>
+        <td>{{ v['data_hora'][:16] }}</td>
+        <td>{{ v['cliente_nome'] }}</td>
+        <td>R$ {{ "%.2f"|format(v['total_liquido']) }}</td>
+        <td><a href="{{ url_for('impressao.cupom', venda_id=v['id']) }}" target="_blank" class="btn btn-secundario">Cupom</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Nenhuma venda no período.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

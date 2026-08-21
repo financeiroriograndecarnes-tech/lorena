@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Produtos mais vendidos - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Produtos mais vendidos</h1>
+{% include "relatorios/_subnav.html" %}
+
+<div class="card">
+  <div class="botoes">
+    <a href="{{ url_for('relatorios.produtos', inicio=inicio, fim=fim, ordenar='faturamento') }}"
+       class="btn {{ '' if ordenar=='faturamento' else 'btn-secundario' }}">Ordenar por faturamento</a>
+    <a href="{{ url_for('relatorios.produtos', inicio=inicio, fim=fim, ordenar='qtd') }}"
+       class="btn {{ '' if ordenar=='qtd' else 'btn-secundario' }}">Ordenar por quantidade</a>
+  </div>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead><tr><th>#</th><th>Produto</th><th>Qtd vendida</th><th>Faturamento</th><th>Nº vendas</th></tr></thead>
+    <tbody>
+      {% for l in linhas %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ l['descricao'] }}</td>
+        <td>{{ "%.3f"|format(l['qtd_total']) }}</td>
+        <td>R$ {{ "%.2f"|format(l['faturamento']) }}</td>
+        <td>{{ l['n_vendas'] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Nenhuma venda no período.</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if linhas %}
+    <tfoot>
+      <tr><td colspan="3"><strong>Total</strong></td><td><strong>R$ {{ "%.2f"|format(faturamento_total) }}</strong></td><td></td></tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{% endblock %}

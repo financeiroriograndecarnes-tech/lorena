@@ -1,0 +1,22 @@
+<div class="botoes" style="margin-bottom:16px;">
+  <a href="{{ url_for('relatorios.vendas', inicio=inicio, fim=fim) }}"
+     class="btn {{ '' if sub=='vendas' else 'btn-secundario' }}">Vendas</a>
+  <a href="{{ url_for('relatorios.produtos', inicio=inicio, fim=fim) }}"
+     class="btn {{ '' if sub=='produtos' else 'btn-secundario' }}">Produtos mais vendidos</a>
+  <a href="{{ url_for('relatorios.margem', inicio=inicio, fim=fim) }}"
+     class="btn {{ '' if sub=='margem' else 'btn-secundario' }}">Margem</a>
+</div>
+
+<form method="get" class="card linha-campos">
+  <div class="campo">
+    <label>De</label>
+    <input type="date" name="inicio" value="{{ inicio }}">
+  </div>
+  <div class="campo">
+    <label>Até</label>
+    <input type="date" name="fim" value="{{ fim }}">
+  </div>
+  <div class="campo" style="align-self:flex-end;">
+    <button type="submit" class="btn-grande">Filtrar</button>
+  </div>
+</form>

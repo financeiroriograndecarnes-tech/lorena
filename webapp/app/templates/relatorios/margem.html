@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Margem - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Margem por produto</h1>
+{% include "relatorios/_subnav.html" %}
+
+<div class="card">
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Faturamento</div><div class="valor">R$ {{ "%.2f"|format(faturamento_total) }}</div></div>
+    <div class="indicador"><div class="rotulo">Custo</div><div class="valor">R$ {{ "%.2f"|format(custo_total_geral) }}</div></div>
+    <div class="indicador"><div class="rotulo">Lucro bruto</div><div class="valor">R$ {{ "%.2f"|format(lucro_total) }}</div></div>
+    <div class="indicador"><div class="rotulo">Margem geral</div><div class="valor">{{ "%.1f"|format(margem_geral) }}%</div></div>
+  </div>
+</div>
+
+<p style="color:var(--cor-texto-suave)">
+  O custo usa o preço de custo <strong>atual</strong> cadastrado no produto — se o custo mudou desde a venda,
+  a margem aqui reflete o custo de hoje, não o da época da venda.
+</p>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead><tr><th>Produto</th><th>Qtd</th><th>Faturamento</th><th>Custo</th><th>Lucro</th><th>Margem</th></tr></thead>
+    <tbody>
+      {% for r in resultado %}
+      <tr>
+        <td>{{ r.descricao }}</td>
+        <td>{{ "%.3f"|format(r.qtd) }}</td>
+        <td>R$ {{ "%.2f"|format(r.faturamento) }}</td>
+        <td>R$ {{ "%.2f"|format(r.custo) }}</td>
+        <td>R$ {{ "%.2f"|format(r.lucro) }}</td>
+        <td>
+          {% if r.margem_perc < 15 %}<span class="badge badge-vermelho">{{ "%.1f"|format(r.margem_perc) }}%</span>
+          {% elif r.margem_perc < 30 %}<span class="badge badge-amarelo">{{ "%.1f"|format(r.margem_perc) }}%</span>
+          {% else %}<span class="badge badge-verde">{{ "%.1f"|format(r.margem_perc) }}%</span>{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Nenhuma venda no período.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

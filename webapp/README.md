@@ -53,6 +53,10 @@ status (vencido/bloqueado).
   especial instalada). Usa a função de imprimir do próprio navegador
   (Ctrl+P) — funciona igual no computador e no tablet.
 - **Histórico de vendas** (`/pdv/vendas`) para reimprimir cupons antigos.
+- **Relatórios** (filtro por período): Vendas (total, ticket médio, por
+  forma de pagamento), Produtos mais vendidos (por quantidade ou
+  faturamento) e Margem (lucro e % por produto, usando o custo atual
+  cadastrado).
 
 ## Próxima fase (ainda não construída)
 

@@ -18,6 +18,7 @@
     <a href="{{ url_for('receber.lista') }}" class="{{ 'active' if active=='receber' else '' }}">A receber</a>
     <a href="{{ url_for('pagar.lista') }}" class="{{ 'active' if active=='pagar' else '' }}">A pagar</a>
     <a href="{{ url_for('dashboard.tela') }}" class="{{ 'active' if active=='dashboard' else '' }}">Painel</a>
+    <a href="{{ url_for('relatorios.vendas') }}" class="{{ 'active' if active=='relatorios' else '' }}">Relatórios</a>
     <a href="{{ url_for('config.tela') }}" class="{{ 'active' if active=='config' else '' }}">Config.</a>
   </nav>
 </header>
