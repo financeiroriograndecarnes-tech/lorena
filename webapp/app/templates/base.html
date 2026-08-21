@@ -9,12 +9,16 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="topbar-brand">RIO GRANDE CARNES</div>
+  <div class="topbar-brand">{{ nome_empresa or "Configure o nome da empresa" }}</div>
   <nav class="topbar-nav">
     <a href="{{ url_for('pdv.tela') }}" class="{{ 'active' if active=='pdv' else '' }}">PDV</a>
     <a href="{{ url_for('caixa.tela') }}" class="{{ 'active' if active=='caixa' else '' }}">Caixa</a>
     <a href="{{ url_for('produtos.lista') }}" class="{{ 'active' if active=='produtos' else '' }}">Produtos</a>
     <a href="{{ url_for('clientes.lista') }}" class="{{ 'active' if active=='clientes' else '' }}">Clientes</a>
+    <a href="{{ url_for('receber.lista') }}" class="{{ 'active' if active=='receber' else '' }}">A receber</a>
+    <a href="{{ url_for('pagar.lista') }}" class="{{ 'active' if active=='pagar' else '' }}">A pagar</a>
+    <a href="{{ url_for('dashboard.tela') }}" class="{{ 'active' if active=='dashboard' else '' }}">Painel</a>
+    <a href="{{ url_for('config.tela') }}" class="{{ 'active' if active=='config' else '' }}">Config.</a>
   </nav>
 </header>
 <main class="content">

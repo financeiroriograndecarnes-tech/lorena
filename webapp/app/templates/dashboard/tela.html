@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Painel - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Painel</h1>
+
+<div class="card">
+  <h2>Vendas</h2>
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Hoje ({{ n_dia }} vendas)</div><div class="valor">R$ {{ "%.2f"|format(vendas_dia) }}</div></div>
+    <div class="indicador"><div class="rotulo">Mês ({{ n_mes }} vendas)</div><div class="valor">R$ {{ "%.2f"|format(vendas_mes) }}</div></div>
+    <div class="indicador"><div class="rotulo">Ano ({{ n_ano }} vendas)</div><div class="valor">R$ {{ "%.2f"|format(vendas_ano) }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Contas a receber</h2>
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Em aberto</div><div class="valor">R$ {{ "%.2f"|format(receber_aberto) }}</div></div>
+    <div class="indicador"><div class="rotulo">Vencido</div><div class="valor">R$ {{ "%.2f"|format(receber_vencido) }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Contas a pagar</h2>
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Em aberto</div><div class="valor">R$ {{ "%.2f"|format(pagar_aberto) }}</div></div>
+    <div class="indicador"><div class="rotulo">Vencido</div><div class="valor">R$ {{ "%.2f"|format(pagar_vencido) }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Resumo</h2>
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Produtos abaixo do mínimo</div><div class="valor">{{ produtos_abaixo_minimo }}</div></div>
+    <div class="indicador"><div class="rotulo">Orçamentos em aberto</div><div class="valor">{{ orcamentos_abertos }}</div></div>
+  </div>
+</div>
+
+<div class="card tabela-scroll">
+  <h2>Mais vendidos no mês</h2>
+  <table>
+    <thead><tr><th>Produto</th><th>Faturamento</th></tr></thead>
+    <tbody>
+      {% for r in ranking %}
+      <tr><td>{{ r['descricao'] }}</td><td>R$ {{ "%.2f"|format(r['total']) }}</td></tr>
+      {% else %}
+      <tr><td colspan="2">Sem vendas este mês.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

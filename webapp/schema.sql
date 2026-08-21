@@ -105,7 +105,13 @@ CREATE TABLE IF NOT EXISTS config (
 );
 
 INSERT OR IGNORE INTO config (chave, valor, descricao) VALUES
-    ('NOME_EMPRESA', 'RIO GRANDE CARNES', 'Nome exibido no sistema e no cupom'),
+    ('NOME_EMPRESA', '', 'Nome da empresa, exibido no sistema e no cupom'),
+    ('CNPJ', '', 'CNPJ ou CPF da empresa'),
+    ('ENDERECO', '', 'Endereco exibido no cupom'),
+    ('TELEFONE', '', 'Telefone exibido no cupom'),
     ('PERC_ATACADO', '8', '%% de desconto do varejo para gerar o atacado'),
     ('PERC_CARTAO', '5', '%% de acrescimo sobre o varejo para o cartao'),
-    ('USUARIO_PADRAO', 'OPERADOR', 'Usuario sugerido na abertura');
+    ('USUARIO_PADRAO', 'OPERADOR', 'Usuario sugerido na abertura'),
+    ('JUROS_DIA', '0.0333', '%% de juros por dia de atraso'),
+    ('MULTA_PERC', '2', '%% de multa fixa sobre parcela vencida'),
+    ('DIAS_TOLERANCIA', '0', 'Dias de tolerancia antes de cobrar juros/multa');

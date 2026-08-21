@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Contas a Receber - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Contas a Receber</h1>
+
+<div class="card">
+  <form method="get" class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Cliente / responsavel / turma</label>
+      <input type="search" name="cliente" value="{{ filtro_cliente }}">
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+        <input type="checkbox" name="vencidas" value="1" style="width:auto; min-height:auto;" {{ "checked" if so_vencidas }}>
+        Só vencidas
+      </label>
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button type="submit" class="btn-grande">Filtrar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Em aberto</div><div class="valor">R$ {{ "%.2f"|format(total_aberto) }}</div></div>
+    <div class="indicador"><div class="rotulo">Vencido</div><div class="valor">R$ {{ "%.2f"|format(total_vencido) }}</div></div>
+  </div>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead>
+      <tr><th>Nº</th><th>Cliente</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Encargos</th><th>Devido</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for l in linhas %}
+      <tr>
+        <td>{{ l.row['id'] }}</td>
+        <td>{{ l.row['cliente_nome'] or '' }}</td>
+        <td>{{ l.row['vencimento'] }}</td>
+        <td>R$ {{ "%.2f"|format(l.row['valor_parcela']) }}</td>
+        <td>R$ {{ "%.2f"|format(l.row['valor_pago']) }}</td>
+        <td>R$ {{ "%.2f"|format(l.juros + l.multa) }}</td>
+        <td><strong>R$ {{ "%.2f"|format(l.devido) }}</strong></td>
+        <td>
+          {% if l.status_exibicao == 'Pago' %}<span class="badge badge-verde">Pago</span>
+          {% elif l.status_exibicao == 'Vencido' %}<span class="badge badge-vermelho">Vencido ({{ l.dias_atraso }}d)</span>
+          {% elif l.status_exibicao == 'Parcial' %}<span class="badge badge-azul">Parcial</span>
+          {% else %}<span class="badge badge-neutro">Em aberto</span>{% endif %}
+        </td>
+        <td>
+          {% if l.status_exibicao != 'Pago' %}
+          <button type="button" class="btn btn-secundario" onclick="document.getElementById('baixa-{{ l.row['id'] }}').style.display='block'">Baixar</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% if l.status_exibicao != 'Pago' %}
+      <tr id="baixa-{{ l.row['id'] }}" style="display:none;">
+        <td colspan="9">
+          <form method="post" action="{{ url_for('receber.baixar', parcela_id=l.row['id']) }}" class="linha-campos" style="margin:10px 0;">
+            <div class="campo">
+              <label>Modo</label>
+              <select name="modo">
+                <option value="total">Total (R$ {{ "%.2f"|format(l.devido) }})</option>
+                <option value="parcial">Parcial</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Valor (se parcial)</label>
+              <input type="number" step="0.01" name="valor">
+            </div>
+            <div class="campo">
+              <label>Forma de pagamento</label>
+              <select name="forma">
+                <option value="DINHEIRO">DINHEIRO</option>
+                <option value="CARTAO CREDITO">CARTAO CREDITO</option>
+                <option value="CARTAO DEBITO">CARTAO DEBITO</option>
+                <option value="PIX">PIX</option>
+                <option value="BOLETO">BOLETO</option>
+                <option value="CHEQUE">CHEQUE</option>
+              </select>
+            </div>
+            <div class="campo" style="align-self:flex-end;">
+              <button type="submit" class="btn-grande">Confirmar baixa</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="9">Nenhuma parcela encontrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

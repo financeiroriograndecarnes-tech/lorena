@@ -1,16 +1,23 @@
 /* =====================================================================
    Sistema Lorena (web) | Estilo base -- pensado para toque em tablet
    Botoes e campos grandes, alto contraste, sem hover-dependencia.
+
+   Paleta neutra (cinza/azulado) para tudo -- topo, botoes padrao,
+   cards, foco. Vermelho e verde ficam reservados so para o que
+   precisa CHAMAR ATENCAO de verdade: excluir/cancelar (vermelho),
+   e indicadores de status (badge de ativo/bloqueado, vencido, etc).
    ===================================================================== */
 
 :root {
-  --cor-primaria: #b91c1c;
-  --cor-primaria-escura: #7f1010;
+  --cor-primaria: #3f4756;
+  --cor-primaria-escura: #2b313c;
   --cor-fundo: #f4f4f5;
   --cor-card: #ffffff;
   --cor-texto: #1f2023;
   --cor-texto-suave: #6b7280;
   --cor-borda: #d4d4d8;
+  --cor-perigo: #b91c1c;
+  --cor-perigo-escura: #7f1010;
   --cor-verde: #15803d;
   --cor-amarelo: #a16207;
   --cor-azul: #1d4ed8;
@@ -79,7 +86,7 @@ h2 { font-size: 1.3rem; margin: 0 0 12px; }
 label { display: block; font-weight: 600; margin-bottom: 6px; font-size: .95rem; color: var(--cor-texto-suave); }
 
 input[type=text], input[type=number], input[type=search], input[type=tel],
-input[type=password], select, textarea {
+input[type=password], input[type=date], select, textarea {
   width: 100%;
   min-height: var(--toque-min);
   font-size: 1.1rem;
@@ -98,7 +105,10 @@ input:focus, select:focus, textarea:focus {
 .linha-campos { display: flex; gap: 14px; flex-wrap: wrap; }
 .linha-campos > .campo { flex: 1 1 200px; }
 
-/* ---------- botoes ---------- */
+/* ---------- botoes ----------
+   Padrao = neutro. So .btn-perigo (excluir/cancelar) usa cor de
+   atencao; o resto (inclusive a acao principal de cada tela) fica
+   no mesmo tom neutro do sistema. */
 button, .btn {
   min-height: var(--toque-min);
   padding: 12px 22px;
@@ -113,7 +123,8 @@ button, .btn {
 }
 button:active, .btn:active { background: var(--cor-primaria-escura); }
 .btn-secundario { background: #e4e4e7; color: var(--cor-texto); }
-.btn-verde { background: var(--cor-verde); }
+.btn-perigo { background: var(--cor-perigo); }
+.btn-perigo:active { background: var(--cor-perigo-escura); }
 .btn-cinza { background: #71717a; }
 .btn-grande { font-size: 1.4rem; padding: 20px 30px; min-height: 68px; }
 .botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -127,19 +138,28 @@ tr.linha-clicavel:active { background: #f4f4f5; }
 
 .tabela-scroll { overflow-x: auto; }
 
-/* ---------- badges / status ---------- */
+/* ---------- badges / status ----------
+   Aqui o colorido continua -- sao indicadores de estado
+   (ativo/bloqueado, pago/vencido), nao decoracao do sistema. */
 .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; }
 .badge-verde { background: #dcfce7; color: var(--cor-verde); }
-.badge-vermelho { background: #fee2e2; color: var(--cor-primaria); }
+.badge-vermelho { background: #fee2e2; color: var(--cor-perigo); }
 .badge-amarelo { background: #fef3c7; color: var(--cor-amarelo); }
 .badge-azul { background: #dbeafe; color: var(--cor-azul); }
+.badge-neutro { background: #e4e4e7; color: var(--cor-texto-suave); }
 
 /* ---------- mensagens ---------- */
 .flash-stack { margin-bottom: 16px; }
 .flash { padding: 12px 16px; border-radius: var(--raio); margin-bottom: 8px; font-weight: 600; }
-.flash-sucesso { background: #dcfce7; color: var(--cor-verde); }
-.flash-erro { background: #fee2e2; color: var(--cor-primaria); }
+.flash-sucesso { background: #e4e4e7; color: var(--cor-primaria); }
+.flash-erro { background: #fee2e2; color: var(--cor-perigo); }
 .flash-aviso { background: #fef3c7; color: var(--cor-amarelo); }
+
+/* ---------- cards de indicador (dashboard) ---------- */
+.indicador { text-align: left; }
+.indicador .valor { font-size: 1.6rem; font-weight: 800; }
+.indicador .rotulo { color: var(--cor-texto-suave); font-size: .9rem; }
+.grid-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 
 /* ---------- responsivo ---------- */
 @media (max-width: 720px) {

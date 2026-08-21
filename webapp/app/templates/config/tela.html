@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Configurações - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Dados da empresa</h1>
+<p style="color:var(--cor-texto-suave); margin-top:-8px;">
+  Essas informações aparecem no sistema e (mais pra frente) no cupom.
+</p>
+
+<form method="post" class="card">
+  <div class="linha-campos">
+    {% for chave, rotulo in campos %}
+    <div class="campo" style="flex:1 1 260px;">
+      <label>{{ rotulo }}</label>
+      <input type="text" name="{{ chave }}" value="{{ valores.get(chave, '') }}">
+    </div>
+    {% endfor %}
+  </div>
+  <div class="botoes">
+    <button type="submit" class="btn-grande">Salvar</button>
+  </div>
+</form>
+{% endblock %}

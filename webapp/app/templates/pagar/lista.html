@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Contas a Pagar - {{ app_nome }}{% endblock %}
+{% block content %}
+<h1>Contas a Pagar</h1>
+
+<div class="card">
+  <div class="grid-indicadores">
+    <div class="indicador"><div class="rotulo">Em aberto</div><div class="valor">R$ {{ "%.2f"|format(total_aberto) }}</div></div>
+    <div class="indicador"><div class="rotulo">Vencido</div><div class="valor">R$ {{ "%.2f"|format(total_vencido) }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Nova conta a pagar</h2>
+  <form method="post" action="{{ url_for('pagar.novo') }}" class="linha-campos">
+    <div class="campo" style="flex:2">
+      <label>Fornecedor</label>
+      <input type="text" name="fornecedor" required>
+    </div>
+    <div class="campo" style="flex:2">
+      <label>Descricao</label>
+      <input type="text" name="descricao">
+    </div>
+    <div class="campo">
+      <label>Vencimento</label>
+      <input type="date" name="vencimento" required>
+    </div>
+    <div class="campo">
+      <label>Valor (R$)</label>
+      <input type="number" step="0.01" name="valor" required>
+    </div>
+    <div class="campo" style="align-self:flex-end;">
+      <button type="submit" class="btn-grande">Lançar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card tabela-scroll">
+  <table>
+    <thead><tr><th>Nº</th><th>Fornecedor</th><th>Descricao</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in contas %}
+      <tr>
+        <td>{{ c['id'] }}</td>
+        <td>{{ c['fornecedor'] }}</td>
+        <td>{{ c['descricao'] or '' }}</td>
+        <td>{{ c['vencimento'] }}</td>
+        <td>R$ {{ "%.2f"|format(c['valor']) }}</td>
+        <td>
+          {% if c['status'] == 'Pago' %}<span class="badge badge-verde">Pago</span>
+          {% elif c['vencimento'] < hoje %}<span class="badge badge-vermelho">Vencido</span>
+          {% else %}<span class="badge badge-neutro">Em aberto</span>{% endif %}
+        </td>
+        <td>
+          {% if c['status'] != 'Pago' %}
+          <form method="post" action="{{ url_for('pagar.pagar', conta_id=c['id']) }}" style="display:flex; gap:6px;">
+            <select name="forma" style="min-height:44px;">
+              <option value="DINHEIRO">DINHEIRO</option>
+              <option value="PIX">PIX</option>
+              <option value="CARTAO DEBITO">CARTAO DEBITO</option>
+              <option value="BOLETO">BOLETO</option>
+            </select>
+            <button type="submit" class="btn btn-secundario">Pagar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Nenhuma conta lançada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

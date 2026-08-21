@@ -61,12 +61,12 @@
   {% endif %}
 
   <div class="botoes">
-    <button type="submit" class="btn-verde btn-grande">Salvar</button>
+    <button type="submit" class="btn-grande">Salvar</button>
     <a href="{{ url_for('produtos.lista') }}" class="btn btn-secundario btn-grande">Cancelar</a>
     {% if produto %}
     <form method="post" action="{{ url_for('produtos.excluir', produto_id=produto['id']) }}"
           onsubmit="return confirm('Excluir este produto?')" style="margin-left:auto">
-      <button type="submit" class="btn-cinza btn-grande">Excluir</button>
+      <button type="submit" class="btn-perigo btn-grande">Excluir</button>
     </form>
     {% endif %}
   </div>

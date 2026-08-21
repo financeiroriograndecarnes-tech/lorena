@@ -20,12 +20,16 @@ def create_app(test_config=None):
 
     db_module.init_app(app)
 
-    from .routes import produtos, clientes, caixa, pdv
+    from .routes import produtos, clientes, caixa, pdv, config, receber, pagar, dashboard
 
     app.register_blueprint(produtos.bp)
     app.register_blueprint(clientes.bp)
     app.register_blueprint(caixa.bp)
     app.register_blueprint(pdv.bp)
+    app.register_blueprint(config.bp)
+    app.register_blueprint(receber.bp)
+    app.register_blueprint(pagar.bp)
+    app.register_blueprint(dashboard.bp)
 
     @app.route("/")
     def index():
@@ -33,6 +37,14 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_globals():
-        return {"app_nome": "Sistema Lorena"}
+        db = db_module.get_db()
+        nome_empresa = db.execute(
+            "SELECT valor FROM config WHERE chave = 'NOME_EMPRESA'"
+        ).fetchone()
+        nome_empresa = (nome_empresa["valor"] if nome_empresa else "") or ""
+        return {
+            "app_nome": nome_empresa or "Sistema",
+            "nome_empresa": nome_empresa,
+        }
 
     return app

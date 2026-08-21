@@ -18,8 +18,12 @@ loja, descubra o IP do computador (`ipconfig`) e acesse
 O banco de dados fica em `webapp/data/sistema.db` (SQLite, arquivo único —
 criado automaticamente na primeira execução). Não é versionado no git.
 
-## O que já funciona (fase 1)
+## O que já funciona
 
+- **Configurações**: dados da própria empresa (nome, CNPJ, endereço,
+  telefone, percentuais de atacado/cartão) — nada fica com nome de
+  empresa fixo no código; a usuária cadastra os dados dela aqui, e o
+  nome aparece no topo do sistema.
 - **Produtos**: cadastro, edição, busca, cálculo automático de preço
   varejo/atacado/cartão a partir de custo + margem.
 - **Clientes**: cadastro com Nome, Responsável, Tutor/Professor(a), Turma,
@@ -29,14 +33,22 @@ criado automaticamente na primeira execução). Não é versionado no git.
 - **PDV**: leitura de código de barras/código interno, cliente por número
   de cadastro (com busca por nome/responsável/turma quando não sabe o
   número), pagamento dividido em duas formas, troco, baixa de estoque,
-  geração de parcelas "a prazo" (tabela `contas_receber`, ainda sem tela
-  própria de recebimento — vem na próxima fase).
+  geração de parcelas "a prazo".
+- **Contas a Receber**: lista com juros/multa calculados na hora (nunca
+  gravados como "prévia" -- só quando a baixa acontece de verdade, pra
+  não reintroduzir o bug de juros em dobro que existia no VBA), baixa
+  total ou parcial, filtro por cliente/responsável/turma e só vencidas.
+- **Contas a Pagar**: lançamento e baixa, com lançamento automático no caixa.
+- **Painel**: vendas do dia/mês/ano, contas a receber/pagar (aberto e
+  vencido), produtos abaixo do estoque mínimo, orçamentos em aberto,
+  ranking dos mais vendidos no mês.
+
+Paleta de cores neutra (cinza-azulado) em todo o sistema; vermelho fica
+reservado só para ações de atenção (excluir, cancelar) e badges de
+status (vencido/bloqueado).
 
 ## Próximas fases (ainda não construídas)
 
-- Tela de Contas a Receber (baixa de parcelas, juros/multa por atraso).
-- Contas a Pagar.
-- Dashboard com indicadores.
 - Impressão de cupom/carnê e etiquetas de código de barras.
 - Deploy na nuvem (hospedagem a definir com o usuário).
 
