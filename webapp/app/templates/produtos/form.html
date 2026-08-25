@@ -24,13 +24,20 @@
 
   <div class="linha-campos">
     <div class="campo">
-      <label>Preco de custo (R$)</label>
-      <input type="number" step="0.01" name="preco_custo" value="{{ produto['preco_custo'] if produto else 0 }}">
+      <label>Preço de compra (R$)</label>
+      <input type="number" step="0.01" id="in-custo" name="preco_custo" value="{{ produto['preco_custo'] if produto else 0 }}">
     </div>
     <div class="campo">
-      <label>Margem (%)</label>
-      <input type="number" step="0.01" name="margem" value="{{ produto['margem'] if produto else 0 }}">
+      <label>Preço de venda (R$)</label>
+      <input type="number" step="0.01" id="in-venda" name="preco_venda" value="{{ produto['preco_varejo'] if produto else 0 }}">
     </div>
+    <div class="campo">
+      <label>Margem (calculada)</label>
+      <input type="text" id="in-margem" value="{{ '%.1f'|format(produto['margem']) ~ '%' if produto else '0,0%' }}" disabled>
+    </div>
+  </div>
+
+  <div class="linha-campos">
     <div class="campo">
       <label>Fornecedor</label>
       <input type="text" name="fornecedor" value="{{ produto['fornecedor'] if produto else '' }}">
@@ -54,9 +61,8 @@
 
   {% if produto %}
   <p style="color:var(--cor-texto-suave)">
-    Precos calculados: varejo R$ {{ "%.2f"|format(produto['preco_varejo']) }} ·
-    atacado R$ {{ "%.2f"|format(produto['preco_atacado']) }} ·
-    cartao R$ {{ "%.2f"|format(produto['preco_cartao']) }}
+    Preços derivados do preço de venda: atacado R$ {{ "%.2f"|format(produto['preco_atacado']) }} ·
+    cartão R$ {{ "%.2f"|format(produto['preco_cartao']) }}
   </p>
   {% endif %}
 
@@ -71,4 +77,24 @@
     {% endif %}
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var custo = document.getElementById("in-custo");
+    var venda = document.getElementById("in-venda");
+    var margem = document.getElementById("in-margem");
+
+    function recalcularMargem() {
+      var c = parseFloat(custo.value) || 0;
+      var v = parseFloat(venda.value) || 0;
+      var m = c > 0 ? ((v - c) / c * 100) : 0;
+      margem.value = m.toFixed(1).replace(".", ",") + "%";
+    }
+
+    custo.addEventListener("input", recalcularMargem);
+    venda.addEventListener("input", recalcularMargem);
+  })();
+</script>
 {% endblock %}

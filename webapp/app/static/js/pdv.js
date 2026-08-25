@@ -7,19 +7,34 @@
   const $ = (id) => document.getElementById(id);
   const moeda = (v) => "R$ " + Number(v || 0).toFixed(2).replace(".", ",");
 
-  function recalcular() {
+  /**
+   * Calcula subtotal/desconto/total e troco a partir do valor pago atual,
+   * sem mexer no campo de valor pago (usado quando o proprio valor pago
+   * acabou de ser editado a mao).
+   */
+  function calcularTotais() {
     const subtotal = itens.reduce((s, i) => s + i.total, 0);
     const desconto = Math.min(parseFloat($("in-desconto").value) || 0, subtotal);
     const total = Math.round((subtotal - desconto) * 100) / 100;
     const vp1 = parseFloat($("in-vp1").value) || 0;
-    const vp2 = parseFloat($("in-vp2").value) || 0;
-    const pago = vp1 + vp2;
-    const troco = Math.max(0, pago - total);
+    const troco = Math.max(0, vp1 - total);
 
     $("lbl-subtotal").textContent = "SUBTOTAL: " + moeda(subtotal);
     $("lbl-total").textContent = "TOTAL: " + moeda(total);
     $("lbl-troco").textContent = moeda(troco);
-    return { subtotal, desconto, total, vp1, vp2, troco };
+    return { subtotal, desconto, total, vp1, troco };
+  }
+
+  /**
+   * Chamado quando o carrinho ou o desconto mudam: o valor pago acompanha
+   * o total automaticamente (o total "puxa" pro campo de pagamento).
+   */
+  function recalcularEAcompanharTotal() {
+    const subtotal = itens.reduce((s, i) => s + i.total, 0);
+    const desconto = Math.min(parseFloat($("in-desconto").value) || 0, subtotal);
+    const total = Math.round((subtotal - desconto) * 100) / 100;
+    $("in-vp1").value = total.toFixed(2);
+    return calcularTotais();
   }
 
   function redesenharItens() {
@@ -39,7 +54,7 @@
       btn.addEventListener("click", () => {
         itens.splice(parseInt(btn.dataset.idx, 10), 1);
         redesenharItens();
-        recalcular();
+        recalcularEAcompanharTotal();
       });
     });
   }
@@ -78,7 +93,7 @@
     $("in-qtd").value = "1";
     $("in-codigo").focus();
     redesenharItens();
-    recalcular();
+    recalcularEAcompanharTotal();
   }
 
   function limparVenda() {
@@ -88,10 +103,9 @@
     $("in-cliente-nome").value = "CONSUMIDOR";
     $("in-desconto").value = "0";
     $("in-vp1").value = "0";
-    $("in-vp2").value = "0";
     $("in-parcelas").value = "1";
     redesenharItens();
-    recalcular();
+    calcularTotais();
     $("in-codigo").focus();
   }
 
@@ -143,7 +157,7 @@
   }
 
   async function finalizar(status) {
-    const totais = recalcular();
+    const totais = calcularTotais();
     if (itens.length === 0) {
       alert("Nenhum item na venda.");
       return;
@@ -159,8 +173,8 @@
       total: totais.total,
       forma_pag_1: status === "Orcamento" ? "" : $("in-fp1").value,
       valor_pag_1: status === "Orcamento" ? 0 : totais.vp1,
-      forma_pag_2: status === "Orcamento" ? "" : $("in-fp2").value,
-      valor_pag_2: status === "Orcamento" ? 0 : totais.vp2,
+      forma_pag_2: "",
+      valor_pag_2: 0,
       troco: status === "Orcamento" ? 0 : totais.troco,
       tabela_preco: $("in-tabela").value,
       n_parcelas: parseInt($("in-parcelas").value, 10) || 1,
@@ -191,15 +205,14 @@
   });
   $("in-cliente-cod").addEventListener("change", buscarClientePorCodigo);
   $("btn-buscar-cliente").addEventListener("click", abrirBuscaCliente);
-  $("in-desconto").addEventListener("input", recalcular);
-  $("in-vp1").addEventListener("input", recalcular);
-  $("in-vp2").addEventListener("input", recalcular);
+  $("in-desconto").addEventListener("input", recalcularEAcompanharTotal);
+  $("in-vp1").addEventListener("input", calcularTotais);
   $("btn-finalizar").addEventListener("click", () => finalizar("Concluida"));
   $("btn-orcamento").addEventListener("click", () => finalizar("Orcamento"));
   $("btn-limpar").addEventListener("click", () => {
     if (itens.length === 0 || confirm("Cancelar a venda em andamento?")) limparVenda();
   });
 
-  recalcular();
+  calcularTotais();
   $("in-codigo").focus();
 })();
