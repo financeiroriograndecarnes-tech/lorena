@@ -12,7 +12,7 @@ USUARIO_PADRAO = "OPERADOR"
 def registrar_movimento(db, tipo, valor, forma="DINHEIRO", observacao="", usuario=None):
     db.execute(
         """INSERT INTO caixa (data_hora, tipo, valor, forma_pagamento, observacao, usuario)
-           VALUES (datetime('now','localtime'), ?, ?, ?, ?, ?)""",
+           VALUES (to_char(now(), 'YYYY-MM-DD HH24:MI:SS'), ?, ?, ?, ?, ?)""",
         (tipo, valor, forma, observacao, usuario or USUARIO_PADRAO),
     )
 
@@ -22,7 +22,7 @@ def caixa_aberto(db, dt=None):
     dt = dt or date.today()
     rows = db.execute(
         """SELECT tipo, data_hora FROM caixa
-           WHERE tipo IN ('Abertura','Fechamento') AND date(data_hora) = date(?)
+           WHERE tipo IN ('Abertura','Fechamento') AND data_hora::date = ?::date
            ORDER BY data_hora ASC""",
         (dt.isoformat(),),
     ).fetchall()
@@ -35,7 +35,7 @@ def total_por_forma(db, forma, dt=None):
     dt = dt or date.today()
     row = db.execute(
         """SELECT COALESCE(SUM(valor), 0) AS total FROM caixa
-           WHERE date(data_hora) = date(?) AND forma_pagamento = ? AND tipo != 'Fechamento'""",
+           WHERE data_hora::date = ?::date AND forma_pagamento = ? AND tipo != 'Fechamento'""",
         (dt.isoformat(), forma),
     ).fetchone()
     return row["total"] or 0
@@ -49,7 +49,7 @@ def total_geral_dia(db, dt=None):
     dt = dt or date.today()
     row = db.execute(
         """SELECT COALESCE(SUM(valor), 0) AS total FROM caixa
-           WHERE date(data_hora) = date(?) AND tipo != 'Fechamento'""",
+           WHERE data_hora::date = ?::date AND tipo != 'Fechamento'""",
         (dt.isoformat(),),
     ).fetchone()
     return row["total"] or 0
@@ -63,7 +63,7 @@ def tela():
     db = get_db()
     aberto = caixa_aberto(db)
     movimentos = db.execute(
-        """SELECT * FROM caixa WHERE date(data_hora) = date('now','localtime')
+        """SELECT * FROM caixa WHERE data_hora::date = CURRENT_DATE
            ORDER BY data_hora DESC"""
     ).fetchall()
     resumo = {forma: total_por_forma(db, forma) for forma in FORMAS}

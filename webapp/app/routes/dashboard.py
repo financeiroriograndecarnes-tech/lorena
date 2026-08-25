@@ -7,11 +7,11 @@ from ..db import get_db
 bp = Blueprint("dashboard", __name__, url_prefix="/painel")
 
 
-def _vendas_periodo(db, inicio_sql):
+def _vendas_periodo(db, inicio):
     row = db.execute(
-        f"""SELECT COALESCE(SUM(total_liquido), 0) AS total, COUNT(*) AS n
-            FROM vendas WHERE status = 'Concluida' AND date(data_hora) >= date('now', ?)""",
-        (inicio_sql,),
+        """SELECT COALESCE(SUM(total_liquido), 0) AS total, COUNT(*) AS n
+           FROM vendas WHERE status = 'Concluida' AND data_hora::date >= ?::date""",
+        (inicio.isoformat(),),
     ).fetchone()
     return row["total"], row["n"]
 
@@ -19,11 +19,14 @@ def _vendas_periodo(db, inicio_sql):
 @bp.route("/")
 def tela():
     db = get_db()
-    hoje = date.today().isoformat()
+    hoje_data = date.today()
+    hoje = hoje_data.isoformat()
+    inicio_mes = hoje_data.replace(day=1)
+    inicio_ano = hoje_data.replace(month=1, day=1)
 
-    vendas_dia, n_dia = _vendas_periodo(db, "start of day")
-    vendas_mes, n_mes = _vendas_periodo(db, "start of month")
-    vendas_ano, n_ano = _vendas_periodo(db, "start of year")
+    vendas_dia, n_dia = _vendas_periodo(db, hoje_data)
+    vendas_mes, n_mes = _vendas_periodo(db, inicio_mes)
+    vendas_ano, n_ano = _vendas_periodo(db, inicio_ano)
 
     receber_aberto = db.execute(
         "SELECT COALESCE(SUM(valor_parcela - valor_pago),0) AS t FROM contas_receber WHERE status != 'Pago'"
@@ -50,8 +53,9 @@ def tela():
     ranking = db.execute(
         """SELECT descricao, SUM(total_item) AS total
            FROM itens_venda iv JOIN vendas v ON v.id = iv.venda_id
-           WHERE v.status = 'Concluida' AND date(v.data_hora) >= date('now', 'start of month')
-           GROUP BY iv.descricao ORDER BY total DESC LIMIT 10"""
+           WHERE v.status = 'Concluida' AND v.data_hora::date >= ?::date
+           GROUP BY iv.descricao ORDER BY total DESC LIMIT 10""",
+        (inicio_mes.isoformat(),),
     ).fetchall()
 
     return render_template(

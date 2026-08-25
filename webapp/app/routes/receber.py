@@ -46,7 +46,7 @@ def lista():
         like = f"%{filtro_cliente}%"
         params += [like, like, like]
     if so_vencidas:
-        query += " AND cr.status != 'Pago' AND cr.vencimento < date('now')"
+        query += " AND cr.status != 'Pago' AND cr.vencimento::date < CURRENT_DATE"
     query += " ORDER BY cr.vencimento"
 
     parcelas = db.execute(query, params).fetchall()
@@ -132,7 +132,7 @@ def baixar(parcela_id):
 
     db.execute(
         """UPDATE contas_receber SET valor_pago = ?, juros_multa = juros_multa + ?,
-           data_pagamento = date('now'), status = ? WHERE id = ?""",
+           data_pagamento = CURRENT_DATE::text, status = ? WHERE id = ?""",
         (novo_pago, encargo_cobrado, novo_status, parcela_id),
     )
     registrar_movimento(

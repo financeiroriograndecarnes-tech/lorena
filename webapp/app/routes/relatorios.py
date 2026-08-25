@@ -28,7 +28,7 @@ def vendas():
 
     vendas_lista = db.execute(
         """SELECT * FROM vendas
-           WHERE status = 'Concluida' AND date(data_hora) BETWEEN date(?) AND date(?)
+           WHERE status = 'Concluida' AND data_hora::date BETWEEN ?::date AND ?::date
            ORDER BY data_hora DESC""",
         (inicio, fim),
     ).fetchall()
@@ -47,12 +47,12 @@ def vendas():
     # vendas canceladas e orcamentos no periodo, so pra contexto
     canceladas = db.execute(
         """SELECT COUNT(*) AS n, COALESCE(SUM(total_liquido),0) AS total FROM vendas
-           WHERE status = 'Cancelada' AND date(data_hora) BETWEEN date(?) AND date(?)""",
+           WHERE status = 'Cancelada' AND data_hora::date BETWEEN ?::date AND ?::date""",
         (inicio, fim),
     ).fetchone()
     orcamentos = db.execute(
         """SELECT COUNT(*) AS n, COALESCE(SUM(total_liquido),0) AS total FROM vendas
-           WHERE status = 'Orcamento' AND date(data_hora) BETWEEN date(?) AND date(?)""",
+           WHERE status = 'Orcamento' AND data_hora::date BETWEEN ?::date AND ?::date""",
         (inicio, fim),
     ).fetchone()
 
@@ -77,7 +77,7 @@ def produtos():
                   COUNT(DISTINCT iv.venda_id) AS n_vendas
            FROM itens_venda iv
            JOIN vendas v ON v.id = iv.venda_id
-           WHERE v.status = 'Concluida' AND date(v.data_hora) BETWEEN date(?) AND date(?)
+           WHERE v.status = 'Concluida' AND v.data_hora::date BETWEEN ?::date AND ?::date
            GROUP BY iv.produto_id, iv.descricao
            ORDER BY """ + ("qtd_total" if ordenar == "qtd" else "faturamento") + " DESC",
         (inicio, fim),
@@ -105,7 +105,7 @@ def margem():
            FROM itens_venda iv
            JOIN vendas v ON v.id = iv.venda_id
            LEFT JOIN produtos p ON p.id = iv.produto_id
-           WHERE v.status = 'Concluida' AND date(v.data_hora) BETWEEN date(?) AND date(?)
+           WHERE v.status = 'Concluida' AND v.data_hora::date BETWEEN ?::date AND ?::date
            GROUP BY iv.produto_id, iv.descricao
            ORDER BY (SUM(iv.total_item) - SUM(iv.qtd * COALESCE(p.preco_custo, 0))) DESC""",
         (inicio, fim),

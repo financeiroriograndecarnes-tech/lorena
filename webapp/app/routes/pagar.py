@@ -58,7 +58,7 @@ def pagar(conta_id):
 
     forma = request.form.get("forma", "DINHEIRO")
     db.execute(
-        "UPDATE contas_pagar SET status = 'Pago', data_pagamento = date('now') WHERE id = ?",
+        "UPDATE contas_pagar SET status = 'Pago', data_pagamento = CURRENT_DATE::text WHERE id = ?",
         (conta_id,),
     )
     registrar_movimento(db, "Pagamento", -conta["valor"], forma, f"Conta #{conta_id} | {conta['fornecedor']}")

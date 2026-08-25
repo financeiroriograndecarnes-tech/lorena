@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from flask import Blueprint, jsonify, render_template, request
 
 from ..db import get_db
@@ -102,11 +104,11 @@ def finalizar():
         """INSERT INTO vendas (cliente_id, cliente_nome, vendedor, total_bruto, desconto,
            total_liquido, forma_pag_1, valor_pag_1, forma_pag_2, valor_pag_2, troco,
            status, tabela_preco)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id""",
         (cliente_id, cliente_nome, vendedor, subtotal, desconto, total,
          fp1, vp1, fp2, vp2, troco, status, tabela_preco),
     )
-    venda_id = cur.lastrowid
+    venda_id = cur.fetchone()["id"]
 
     for item in itens:
         db.execute(
@@ -150,7 +152,7 @@ def _validar_venda_a_prazo(db, cliente_id, valor):
         return "Cliente nao esta autorizado a comprar a prazo."
     venc = db.execute(
         """SELECT COUNT(*) AS n FROM contas_receber
-           WHERE cliente_id = ? AND status != 'Pago' AND vencimento < date('now')""",
+           WHERE cliente_id = ? AND status != 'Pago' AND vencimento::date < CURRENT_DATE""",
         (cliente_id,),
     ).fetchone()
     if venc["n"] > 0:
@@ -170,6 +172,7 @@ def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
     n_parcelas = max(1, n_parcelas)
     valor_parcela = round(valor_total / n_parcelas, 2)
     intervalo = int(float(get_config(db).get("INTERVALO_PARCELAS", 30) or 30))
+    hoje = date.today()
     soma = 0
     for i in range(n_parcelas):
         if i < n_parcelas - 1:
@@ -177,8 +180,9 @@ def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
             soma += valor
         else:
             valor = round(valor_total - soma, 2)
+        vencimento = (hoje + timedelta(days=intervalo * (i + 1))).isoformat()
         db.execute(
             """INSERT INTO contas_receber (venda_id, cliente_id, vencimento, valor_parcela, status)
-               VALUES (?, ?, date('now', ?), ?, 'Em Aberto')""",
-            (venda_id, cliente_id, f"+{intervalo * (i + 1)} days", valor),
+               VALUES (?, ?, ?, ?, 'Em Aberto')""",
+            (venda_id, cliente_id, vencimento, valor),
         )
