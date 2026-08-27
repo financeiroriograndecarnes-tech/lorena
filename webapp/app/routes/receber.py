@@ -2,7 +2,7 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 from .caixa import registrar_movimento
 from .config import get_config
 
@@ -16,7 +16,7 @@ def calcular_encargos(db, valor_saldo, vencimento_iso, referencia=None):
     juros_dia = float(cfg.get("JUROS_DIA", 0) or 0)
     multa_perc = float(cfg.get("MULTA_PERC", 0) or 0)
 
-    ref = referencia or date.today()
+    ref = referencia or hoje_brasil()
     venc = date.fromisoformat(vencimento_iso)
     dias_atraso = max(0, (ref - venc).days)
 
@@ -54,7 +54,7 @@ def lista():
     linhas = []
     total_aberto = 0
     total_vencido = 0
-    hoje = date.today()
+    hoje = hoje_brasil()
     for p in parcelas:
         saldo = p["valor_parcela"] - p["valor_pago"]
         juros, multa, dias_atraso = calcular_encargos(db, saldo, p["vencimento"])

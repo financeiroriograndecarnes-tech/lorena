@@ -1,8 +1,6 @@
-from datetime import date
-
 from flask import Blueprint, render_template
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 
 bp = Blueprint("dashboard", __name__, url_prefix="/painel")
 
@@ -19,7 +17,7 @@ def _vendas_periodo(db, inicio):
 @bp.route("/")
 def tela():
     db = get_db()
-    hoje_data = date.today()
+    hoje_data = hoje_brasil()
     hoje = hoje_data.isoformat()
     inicio_mes = hoje_data.replace(day=1)
     inicio_ano = hoje_data.replace(month=1, day=1)

@@ -1,8 +1,6 @@
-from datetime import date
-
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 from .caixa import registrar_movimento
 
 bp = Blueprint("pagar", __name__, url_prefix="/pagar")
@@ -11,7 +9,7 @@ bp = Blueprint("pagar", __name__, url_prefix="/pagar")
 @bp.route("/")
 def lista():
     db = get_db()
-    hoje = date.today().isoformat()
+    hoje = hoje_brasil().isoformat()
     contas = db.execute(
         "SELECT * FROM contas_pagar ORDER BY (status = 'Pago'), vencimento"
     ).fetchall()

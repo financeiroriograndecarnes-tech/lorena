@@ -2,7 +2,7 @@ from datetime import datetime, date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 
 bp = Blueprint("caixa", __name__, url_prefix="/caixa")
 
@@ -19,7 +19,7 @@ def registrar_movimento(db, tipo, valor, forma="DINHEIRO", observacao="", usuari
 
 def caixa_aberto(db, dt=None):
     """Estado = tipo do ULTIMO evento (Abertura/Fechamento) do dia, por horario."""
-    dt = dt or date.today()
+    dt = dt or hoje_brasil()
     rows = db.execute(
         """SELECT tipo, data_hora FROM caixa
            WHERE tipo IN ('Abertura','Fechamento') AND data_hora::date = ?::date
@@ -32,7 +32,7 @@ def caixa_aberto(db, dt=None):
 
 
 def total_por_forma(db, forma, dt=None):
-    dt = dt or date.today()
+    dt = dt or hoje_brasil()
     row = db.execute(
         """SELECT COALESCE(SUM(valor), 0) AS total FROM caixa
            WHERE data_hora::date = ?::date AND forma_pagamento = ? AND tipo != 'Fechamento'""",
@@ -46,7 +46,7 @@ def saldo_dinheiro(db, dt=None):
 
 
 def total_geral_dia(db, dt=None):
-    dt = dt or date.today()
+    dt = dt or hoje_brasil()
     row = db.execute(
         """SELECT COALESCE(SUM(valor), 0) AS total FROM caixa
            WHERE data_hora::date = ?::date AND tipo != 'Fechamento'""",

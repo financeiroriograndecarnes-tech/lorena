@@ -1,15 +1,13 @@
-from datetime import date, timedelta
-
 from flask import Blueprint, render_template, request
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 
 bp = Blueprint("relatorios", __name__, url_prefix="/relatorios")
 
 
 def _periodo_padrao():
     """Do dia 1 do mes atual ate hoje."""
-    hoje = date.today()
+    hoje = hoje_brasil()
     inicio = hoje.replace(day=1)
     return inicio.isoformat(), hoje.isoformat()
 

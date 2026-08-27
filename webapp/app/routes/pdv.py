@@ -1,8 +1,8 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 from .caixa import caixa_aberto, registrar_movimento
 from .config import get_config
 
@@ -172,7 +172,7 @@ def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
     n_parcelas = max(1, n_parcelas)
     valor_parcela = round(valor_total / n_parcelas, 2)
     intervalo = int(float(get_config(db).get("INTERVALO_PARCELAS", 30) or 30))
-    hoje = date.today()
+    hoje = hoje_brasil()
     soma = 0
     for i in range(n_parcelas):
         if i < n_parcelas - 1:

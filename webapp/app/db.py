@@ -1,5 +1,7 @@
 import os
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import click
 import psycopg
@@ -10,6 +12,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = BASE_DIR / "schema.sql"
 
 FUSO_HORARIO = "America/Sao_Paulo"
+
+
+def hoje_brasil():
+    """Data de 'hoje' no fuso do Brasil, independente do fuso do servidor.
+
+    O Render roda em UTC. Sem isso, depois das 21h (horario de Brasilia)
+    ja e' meia-noite em UTC, e date.today() calculado no servidor passa
+    a apontar para o dia seguinte -- enquanto o banco (com a sessao em
+    'America/Sao_Paulo') ainda registra o dia de hoje. O caixa aberto
+    deixa de ser encontrado, dando a impressao de que "nao abre"."""
+    return datetime.now(ZoneInfo(FUSO_HORARIO)).date()
 
 
 class Conexao:
