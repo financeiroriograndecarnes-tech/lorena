@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db, hoje_brasil
+from ..db import get_db, hoje_brasil, parse_num
 from .caixa import registrar_movimento
 
 bp = Blueprint("pagar", __name__, url_prefix="/pagar")
@@ -29,7 +29,7 @@ def novo():
     fornecedor = request.form.get("fornecedor", "").strip()
     descricao = request.form.get("descricao", "").strip()
     vencimento = request.form.get("vencimento", "")
-    valor = float(request.form.get("valor") or 0)
+    valor = parse_num(request.form.get("valor"))
     if not fornecedor or not vencimento or valor <= 0:
         flash("Preencha fornecedor, vencimento e valor.", "erro")
         return redirect(url_for("pagar.lista"))

@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db, hoje_brasil
+from ..db import get_db, hoje_brasil, parse_num
 
 bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 
@@ -76,8 +76,8 @@ def _salvar(cliente_id):
     tutor = request.form.get("tutor", "").strip()
     telefone = request.form.get("telefone", "").strip()
     celular = request.form.get("celular", "").strip()
-    limite = float(request.form.get("limite_credito") or 0)
-    limite_diario = float(request.form.get("limite_diario") or 0)
+    limite = parse_num(request.form.get("limite_credito"))
+    limite_diario = parse_num(request.form.get("limite_diario"))
     alergia = request.form.get("alergia", "").strip()
     status = request.form.get("status", "Ativo")
     permite_a_prazo = request.form.get("permite_a_prazo", "Nao")

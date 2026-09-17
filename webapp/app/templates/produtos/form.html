@@ -25,11 +25,11 @@
   <div class="linha-campos">
     <div class="campo">
       <label>Preço de compra (R$)</label>
-      <input type="number" step="0.01" id="in-custo" name="preco_custo" value="{{ produto['preco_custo'] if produto else 0 }}">
+      <input type="text" inputmode="decimal" id="in-custo" name="preco_custo" value="{{ produto['preco_custo'] if produto else 0 }}">
     </div>
     <div class="campo">
       <label>Preço de venda (R$)</label>
-      <input type="number" step="0.01" id="in-venda" name="preco_venda" value="{{ produto['preco_varejo'] if produto else 0 }}">
+      <input type="text" inputmode="decimal" id="in-venda" name="preco_venda" value="{{ produto['preco_varejo'] if produto else 0 }}">
     </div>
     <div class="campo">
       <label>Margem (calculada)</label>
@@ -51,11 +51,11 @@
   <div class="linha-campos">
     <div class="campo">
       <label>Estoque atual</label>
-      <input type="number" step="0.001" name="estoque_atual" value="{{ produto['estoque_atual'] if produto else 0 }}">
+      <input type="text" inputmode="decimal" name="estoque_atual" value="{{ produto['estoque_atual'] if produto else 0 }}">
     </div>
     <div class="campo">
       <label>Estoque minimo</label>
-      <input type="number" step="0.001" name="estoque_minimo" value="{{ produto['estoque_minimo'] if produto else 0 }}">
+      <input type="text" inputmode="decimal" name="estoque_minimo" value="{{ produto['estoque_minimo'] if produto else 0 }}">
     </div>
   </div>
 
@@ -86,9 +86,13 @@
     var venda = document.getElementById("in-venda");
     var margem = document.getElementById("in-margem");
 
+    function numBR(v) {
+      return parseFloat(String(v || "").trim().replace(",", ".")) || 0;
+    }
+
     function recalcularMargem() {
-      var c = parseFloat(custo.value) || 0;
-      var v = parseFloat(venda.value) || 0;
+      var c = numBR(custo.value);
+      var v = numBR(venda.value);
       var m = c > 0 ? ((v - c) / c * 100) : 0;
       margem.value = m.toFixed(1).replace(".", ",") + "%";
     }

@@ -14,6 +14,38 @@ SCHEMA_PATH = BASE_DIR / "schema.sql"
 FUSO_HORARIO = "America/Sao_Paulo"
 
 
+def parse_num(valor, padrao=0.0):
+    """Converte texto digitado (formulario) em numero aceitando tanto
+    "15.50" quanto "15,50" -- os campos de valor viraram type="text" com
+    inputmode="decimal" (o .select() em type="number" nao funciona direito
+    no Android), e o teclado numerico em portugues costuma mostrar virgula
+    em vez de ponto. Sem isso, float("15,50") derruba a rota com erro."""
+    if valor is None:
+        return padrao
+    texto = str(valor).strip()
+    if not texto:
+        return padrao
+    texto = texto.replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return padrao
+
+
+def parse_int(valor, padrao=0):
+    """Mesma ideia do parse_num, mas para campos inteiros (codigo, copias,
+    parcelas) que tambem viraram type="text" com inputmode="numeric"."""
+    if valor is None:
+        return padrao
+    texto = str(valor).strip()
+    if not texto:
+        return padrao
+    try:
+        return int(float(texto.replace(",", ".")))
+    except ValueError:
+        return padrao
+
+
 def hoje_brasil():
     """Data de 'hoje' no fuso do Brasil, independente do fuso do servidor.
 

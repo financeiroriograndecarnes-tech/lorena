@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ..db import get_db, hoje_brasil
+from ..db import get_db, hoje_brasil, parse_int
 from .caixa import caixa_aberto, registrar_movimento
 from .config import get_config
 
@@ -196,7 +196,7 @@ def _validar_limite_diario(db, cliente_id, valor_venda):
 def _gerar_parcelas(db, venda_id, cliente_id, valor_total, n_parcelas):
     n_parcelas = max(1, n_parcelas)
     valor_parcela = round(valor_total / n_parcelas, 2)
-    intervalo = int(float(get_config(db).get("INTERVALO_PARCELAS", 30) or 30))
+    intervalo = parse_int(get_config(db).get("INTERVALO_PARCELAS"), 30)
     hoje = hoje_brasil()
     soma = 0
     for i in range(n_parcelas):

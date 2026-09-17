@@ -2,7 +2,7 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db, hoje_brasil
+from ..db import get_db, hoje_brasil, parse_int, parse_num
 from .caixa import registrar_movimento
 from .config import get_config
 
@@ -12,9 +12,9 @@ bp = Blueprint("receber", __name__, url_prefix="/receber")
 def calcular_encargos(db, valor_saldo, vencimento_iso, referencia=None):
     """Juros + multa sobre o saldo, se vencido alem da tolerancia. Nao grava nada."""
     cfg = get_config(db)
-    tolerancia = int(float(cfg.get("DIAS_TOLERANCIA", 0) or 0))
-    juros_dia = float(cfg.get("JUROS_DIA", 0) or 0)
-    multa_perc = float(cfg.get("MULTA_PERC", 0) or 0)
+    tolerancia = parse_int(cfg.get("DIAS_TOLERANCIA"), 0)
+    juros_dia = parse_num(cfg.get("JUROS_DIA"), 0)
+    multa_perc = parse_num(cfg.get("MULTA_PERC"), 0)
 
     ref = referencia or hoje_brasil()
     venc = date.fromisoformat(vencimento_iso)
@@ -115,7 +115,7 @@ def baixar(parcela_id):
     if modo == "total":
         valor_recebido = round(saldo + encargos, 2)
     else:
-        valor_recebido = float(request.form.get("valor") or 0)
+        valor_recebido = parse_num(request.form.get("valor"))
         if valor_recebido <= 0:
             flash("Informe um valor valido.", "erro")
             return redirect(url_for("receber.lista"))

@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db
+from ..db import get_db, parse_num
 
 bp = Blueprint("produtos", __name__, url_prefix="/produtos")
 
@@ -11,8 +11,8 @@ def calcular_precos(custo, venda):
     do varejo pelos percentuais configurados."""
     db = get_db()
     cfg = {r["chave"]: r["valor"] for r in db.execute("SELECT chave, valor FROM config")}
-    perc_atacado = float(cfg.get("PERC_ATACADO", 8) or 0)
-    perc_cartao = float(cfg.get("PERC_CARTAO", 5) or 0)
+    perc_atacado = parse_num(cfg.get("PERC_ATACADO"), 8)
+    perc_cartao = parse_num(cfg.get("PERC_CARTAO"), 5)
 
     margem = ((venda - custo) / custo * 100) if custo > 0 else 0
     atacado = venda * (1 - perc_atacado / 100)
@@ -69,10 +69,10 @@ def _salvar(produto_id):
 
     codigo_barras = request.form.get("codigo_barras", "").strip() or None
     unidade = request.form.get("unidade", "UN")
-    custo = float(request.form.get("preco_custo") or 0)
-    varejo = float(request.form.get("preco_venda") or 0)
-    estoque_atual = float(request.form.get("estoque_atual") or 0)
-    estoque_minimo = float(request.form.get("estoque_minimo") or 0)
+    custo = parse_num(request.form.get("preco_custo"))
+    varejo = parse_num(request.form.get("preco_venda"))
+    estoque_atual = parse_num(request.form.get("estoque_atual"))
+    estoque_minimo = parse_num(request.form.get("estoque_minimo"))
     fornecedor = request.form.get("fornecedor", "").strip()
     validade = request.form.get("validade") or None
 

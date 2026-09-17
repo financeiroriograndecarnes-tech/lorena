@@ -7,6 +7,10 @@
 
   const $ = (id) => document.getElementById(id);
   const moeda = (v) => "R$ " + Number(v || 0).toFixed(2).replace(".", ",");
+  // Aceita "15,50" ou "15.50" -- o teclado numerico em portugues costuma
+  // mostrar virgula, e parseFloat("15,50") sozinho ignoraria tudo depois
+  // da virgula (viraria 15, nao 15.5).
+  const numBR = (v) => parseFloat(String(v || "").trim().replace(",", ".")) || 0;
 
   /**
    * Calcula subtotal/desconto/total e troco a partir do valor pago atual,
@@ -15,9 +19,9 @@
    */
   function calcularTotais() {
     const subtotal = itens.reduce((s, i) => s + i.total, 0);
-    const desconto = Math.min(parseFloat($("in-desconto").value) || 0, subtotal);
+    const desconto = Math.min(numBR($("in-desconto").value), subtotal);
     const total = Math.round((subtotal - desconto) * 100) / 100;
-    const vp1 = parseFloat($("in-vp1").value) || 0;
+    const vp1 = numBR($("in-vp1").value);
     const troco = Math.max(0, vp1 - total);
 
     $("lbl-subtotal").textContent = "SUBTOTAL: " + moeda(subtotal);
@@ -33,7 +37,7 @@
    */
   function recalcularEAcompanharTotal() {
     const subtotal = itens.reduce((s, i) => s + i.total, 0);
-    const desconto = Math.min(parseFloat($("in-desconto").value) || 0, subtotal);
+    const desconto = Math.min(numBR($("in-desconto").value), subtotal);
     const total = Math.round((subtotal - desconto) * 100) / 100;
     $("in-vp1").value = total.toFixed(2);
     return calcularTotais();
@@ -98,7 +102,7 @@
 
   async function adicionarProduto() {
     const codigo = $("in-codigo").value.trim();
-    const qtd = parseFloat($("in-qtd").value) || 1;
+    const qtd = numBR($("in-qtd").value) || 1;
     const tabela = $("in-tabela").value;
     if (!codigo) return;
 
@@ -240,11 +244,8 @@
     limparVenda();
   }
 
-  // Seleciona o conteudo ao focar, pra digitar substituir em vez de
-  // "grudar" no 0 (ou no valor auto-preenchido) que ja esta no campo.
-  function selecionarAoFocar(id) {
-    $(id).addEventListener("focus", (e) => e.target.select());
-  }
+  // Selecionar o conteudo ao focar um campo numerico e' tratado
+  // globalmente em static/js/global.js (carregado em todas as telas).
 
   $("btn-adicionar").addEventListener("click", adicionarProduto);
   $("in-codigo").addEventListener("keydown", (e) => {
@@ -259,8 +260,6 @@
   $("btn-limpar").addEventListener("click", () => {
     if (itens.length === 0 || confirm("Cancelar a venda em andamento?")) limparVenda();
   });
-
-  ["in-vp1", "in-desconto", "in-qtd"].forEach(selecionarAoFocar);
 
   calcularTotais();
   $("in-codigo").focus();

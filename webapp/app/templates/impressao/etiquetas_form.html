@@ -6,15 +6,15 @@
 <form method="post" action="{{ url_for('impressao.etiquetas') }}" target="_blank" class="card linha-campos">
   <div class="campo">
     <label>Código inicial (vazio = todos)</label>
-    <input type="number" name="inicial">
+    <input type="text" inputmode="numeric" name="inicial">
   </div>
   <div class="campo">
     <label>Código final (vazio = todos)</label>
-    <input type="number" name="final">
+    <input type="text" inputmode="numeric" name="final">
   </div>
   <div class="campo">
     <label>Cópias por produto</label>
-    <input type="number" name="copias" value="1" min="1">
+    <input type="text" inputmode="numeric" name="copias" value="1">
   </div>
   <div class="campo" style="align-self:flex-end;">
     <button type="submit" class="btn-grande">Gerar etiquetas</button>

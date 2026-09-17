@@ -2,7 +2,7 @@ from datetime import datetime, date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db, hoje_brasil
+from ..db import get_db, hoje_brasil, parse_num
 
 bp = Blueprint("caixa", __name__, url_prefix="/caixa")
 
@@ -84,7 +84,7 @@ def abrir():
     if caixa_aberto(db):
         flash("O caixa de hoje ja esta aberto.", "aviso")
         return redirect(url_for("caixa.tela"))
-    valor = float(request.form.get("valor") or 0)
+    valor = parse_num(request.form.get("valor"))
     if valor < 0:
         flash("Fundo de troco invalido.", "erro")
         return redirect(url_for("caixa.tela"))
@@ -100,7 +100,7 @@ def sangria():
     if not caixa_aberto(db):
         flash("Abra o caixa antes de fazer sangria.", "erro")
         return redirect(url_for("caixa.tela"))
-    valor = float(request.form.get("valor") or 0)
+    valor = parse_num(request.form.get("valor"))
     motivo = request.form.get("motivo", "").strip()
     if valor <= 0:
         flash("Informe um valor valido.", "erro")
@@ -120,7 +120,7 @@ def suprimento():
     if not caixa_aberto(db):
         flash("Abra o caixa antes de lancar suprimento.", "erro")
         return redirect(url_for("caixa.tela"))
-    valor = float(request.form.get("valor") or 0)
+    valor = parse_num(request.form.get("valor"))
     motivo = request.form.get("motivo", "").strip()
     if valor <= 0:
         flash("Informe um valor valido.", "erro")
@@ -140,7 +140,7 @@ def fechar():
     if not caixa_aberto(db):
         flash("Nao existe caixa aberto hoje.", "erro")
         return redirect(url_for("caixa.tela"))
-    apurado = float(request.form.get("apurado") or 0)
+    apurado = parse_num(request.form.get("apurado"))
     esperado = saldo_dinheiro(db)
     diferenca = apurado - esperado
     if abs(diferenca) > 0.009:

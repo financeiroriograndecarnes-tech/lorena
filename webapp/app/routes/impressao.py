@@ -4,7 +4,7 @@ from io import BytesIO
 
 from flask import Blueprint, render_template, request
 
-from ..db import get_db
+from ..db import get_db, parse_int
 from .config import get_config
 
 bp = Blueprint("impressao", __name__, url_prefix="/impressao")
@@ -18,7 +18,7 @@ def cupom(venda_id):
     itens = db.execute(
         "SELECT * FROM itens_venda WHERE venda_id = ?", (venda_id,)
     ).fetchall()
-    largura = int(float(cfg.get("LARGURA_CUPOM", 80) or 80))
+    largura = parse_int(cfg.get("LARGURA_CUPOM"), 80)
     return render_template(
         "impressao/cupom.html", venda=venda, itens=itens, cfg=cfg, largura=largura
     )
@@ -57,16 +57,16 @@ def etiquetas():
     if request.method == "POST":
         ini = request.form.get("inicial", "").strip()
         fim = request.form.get("final", "").strip()
-        copias = int(request.form.get("copias") or 1)
+        copias = parse_int(request.form.get("copias"), 1)
 
         query = "SELECT * FROM produtos WHERE ativo = 1"
         params = []
         if ini:
             query += " AND id >= ?"
-            params.append(int(ini))
+            params.append(parse_int(ini))
         if fim:
             query += " AND id <= ?"
-            params.append(int(fim))
+            params.append(parse_int(fim))
         query += " ORDER BY descricao"
         produtos = db.execute(query, params).fetchall()
 
