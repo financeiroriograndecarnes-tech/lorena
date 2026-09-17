@@ -35,7 +35,7 @@
       {% for c in clientes %}
       <tr class="linha-clicavel" onclick="window.location='{{ url_for('clientes.editar', cliente_id=c['id']) }}'">
         <td>{{ c['id'] }}</td>
-        <td>{{ c['nome'] }}</td>
+        <td>{{ c['nome'] }} {% if c['alergia'] %}<span class="badge badge-vermelho" title="{{ c['alergia'] }}">⚠ alergia</span>{% endif %}</td>
         <td>{{ c['responsavel'] or '' }}</td>
         <td>{{ c['turma'] or '' }}</td>
         <td>

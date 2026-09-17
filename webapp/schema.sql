@@ -37,8 +37,16 @@ CREATE TABLE IF NOT EXISTS clientes (
     permite_a_prazo TEXT NOT NULL DEFAULT 'Nao',          -- Sim | Nao
     turma           TEXT,
     tutor           TEXT,
+    limite_diario   REAL NOT NULL DEFAULT 0,             -- 0 = sem limite de gasto diario
+    alergia         TEXT,                                -- alerta mostrado no PDV
     criado_em       TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
 );
+
+-- Colunas adicionadas depois da criacao inicial da tabela (bancos ja
+-- existentes nao ganham as colunas novas so por causa do CREATE TABLE
+-- IF NOT EXISTS acima).
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS limite_diario REAL NOT NULL DEFAULT 0;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS alergia TEXT;
 
 CREATE TABLE IF NOT EXISTS vendas (
     id              SERIAL PRIMARY KEY,

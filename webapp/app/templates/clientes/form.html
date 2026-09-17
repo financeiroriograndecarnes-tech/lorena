@@ -58,10 +58,24 @@
     </div>
   </div>
 
+  <div class="linha-campos">
+    <div class="campo">
+      <label>Limite de gasto diário (R$)</label>
+      <input type="number" step="0.01" name="limite_diario" value="{{ cliente['limite_diario'] if cliente else 0 }}" placeholder="0 = sem limite">
+    </div>
+    <div class="campo" style="flex:2">
+      <label>Alergia (aparece como aviso no PDV)</label>
+      <input type="text" name="alergia" value="{{ cliente['alergia'] if cliente else '' }}" placeholder="Ex.: alergia a amendoim">
+    </div>
+  </div>
+
   {% if cliente %}
   <p style="color:var(--cor-texto-suave)">
     Saldo devedor atual: <strong>R$ {{ "%.2f"|format(saldo) }}</strong> ·
     Credito disponivel: <strong>R$ {{ "%.2f"|format(cliente['limite_credito'] - saldo) }}</strong>
+    {% if cliente['limite_diario'] and cliente['limite_diario'] > 0 %}
+    · Gasto hoje: <strong>R$ {{ "%.2f"|format(gasto) }}</strong> de <strong>R$ {{ "%.2f"|format(cliente['limite_diario']) }}</strong>
+    {% endif %}
   </p>
   {% endif %}
 

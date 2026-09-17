@@ -3,6 +3,7 @@
 
   let itens = [];
   let clienteId = null;
+  let clienteStatus = null; // { alergia, limite_diario, gasto_hoje }
 
   const $ = (id) => document.getElementById(id);
   const moeda = (v) => "R$ " + Number(v || 0).toFixed(2).replace(".", ",");
@@ -22,6 +23,7 @@
     $("lbl-subtotal").textContent = "SUBTOTAL: " + moeda(subtotal);
     $("lbl-total").textContent = "TOTAL: " + moeda(total);
     $("lbl-troco").textContent = moeda(troco);
+    renderizarAvisoCliente(total);
     return { subtotal, desconto, total, vp1, troco };
   }
 
@@ -35,6 +37,41 @@
     const total = Math.round((subtotal - desconto) * 100) / 100;
     $("in-vp1").value = total.toFixed(2);
     return calcularTotais();
+  }
+
+  /**
+   * Mostra o aviso de alergia (sempre que tiver) e a situacao do limite de
+   * gasto diario (somando a venda atual ao que ja foi gasto hoje).
+   */
+  function renderizarAvisoCliente(totalAtual) {
+    const caixa = $("aviso-cliente");
+    if (!clienteStatus) {
+      caixa.style.display = "none";
+      caixa.innerHTML = "";
+      return;
+    }
+    let html = "";
+    if (clienteStatus.alergia) {
+      html += '<div class="aviso-alergia">⚠ ALERGIA: ' + clienteStatus.alergia + "</div>";
+    }
+    if (clienteStatus.limite_diario > 0) {
+      const somaHoje = (clienteStatus.gasto_hoje || 0) + (totalAtual || 0);
+      const estourou = somaHoje > clienteStatus.limite_diario + 0.009;
+      html += '<div class="aviso-limite' + (estourou ? " estourado" : "") + '">' +
+        (estourou ? "⚠ LIMITE DIARIO ESTOURADO — " : "") +
+        "Gasto hoje + esta venda: " + moeda(somaHoje) + " de " + moeda(clienteStatus.limite_diario) +
+        "</div>";
+    }
+    caixa.innerHTML = html;
+    caixa.style.display = html ? "block" : "none";
+  }
+
+  async function carregarStatusCliente(id) {
+    if (!id) { clienteStatus = null; renderizarAvisoCliente(0); return; }
+    const resp = await fetch("/clientes/" + id + "/status.json");
+    const dados = await resp.json();
+    clienteStatus = dados.encontrado ? dados : null;
+    calcularTotais();
   }
 
   function redesenharItens() {
@@ -99,6 +136,7 @@
   function limparVenda() {
     itens = [];
     clienteId = null;
+    clienteStatus = null;
     $("in-cliente-cod").value = "";
     $("in-cliente-nome").value = "CONSUMIDOR";
     $("in-desconto").value = "0";
@@ -118,6 +156,7 @@
     if (achou) {
       clienteId = achou.id;
       $("in-cliente-nome").value = achou.nome;
+      carregarStatusCliente(clienteId);
     } else {
       alert("Cliente numero " + cod + " nao encontrado.");
     }
@@ -141,7 +180,8 @@
         item.className = "card";
         item.style.cursor = "pointer";
         item.style.margin = "8px 0";
-        item.innerHTML = "<strong>#" + r.id + " — " + r.nome + "</strong><br>" +
+        item.innerHTML = "<strong>#" + r.id + " — " + r.nome + "</strong>" +
+          (r.alergia ? ' <span class="badge badge-vermelho">⚠ alergia</span>' : "") + "<br>" +
           (r.responsavel ? "Responsavel: " + r.responsavel + " · " : "") +
           (r.turma ? "Turma: " + r.turma : "");
         item.addEventListener("click", () => {
@@ -149,6 +189,7 @@
           $("in-cliente-cod").value = r.id;
           $("in-cliente-nome").value = r.nome;
           caixa.style.display = "none";
+          carregarStatusCliente(clienteId);
         });
         div.appendChild(item);
       });
@@ -199,6 +240,12 @@
     limparVenda();
   }
 
+  // Seleciona o conteudo ao focar, pra digitar substituir em vez de
+  // "grudar" no 0 (ou no valor auto-preenchido) que ja esta no campo.
+  function selecionarAoFocar(id) {
+    $(id).addEventListener("focus", (e) => e.target.select());
+  }
+
   $("btn-adicionar").addEventListener("click", adicionarProduto);
   $("in-codigo").addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); adicionarProduto(); }
@@ -212,6 +259,8 @@
   $("btn-limpar").addEventListener("click", () => {
     if (itens.length === 0 || confirm("Cancelar a venda em andamento?")) limparVenda();
   });
+
+  ["in-vp1", "in-desconto", "in-qtd"].forEach(selecionarAoFocar);
 
   calcularTotais();
   $("in-codigo").focus();

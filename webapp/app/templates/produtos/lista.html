@@ -18,12 +18,14 @@
 <div class="botoes" style="margin-bottom:16px;">
   <a href="{{ url_for('produtos.novo') }}" class="btn btn-grande">+ Novo produto</a>
   <a href="{{ url_for('impressao.etiquetas') }}" class="btn btn-secundario">Gerar etiquetas</a>
+  <a href="{{ url_for('relatorios.produtos') }}" class="btn btn-secundario">📈 Mais vendidos</a>
 </div>
 
 <div class="card tabela-scroll">
   <table>
     <thead>
       <tr>
+        <th>Nº</th>
         <th>Descricao</th>
         <th>Un.</th>
         <th>Varejo</th>
@@ -34,6 +36,7 @@
     <tbody>
       {% for p in produtos %}
       <tr class="linha-clicavel" onclick="window.location='{{ url_for('produtos.editar', produto_id=p['id']) }}'">
+        <td>{{ p['id'] }}</td>
         <td>{{ p['descricao'] }}</td>
         <td>{{ p['unidade'] }}</td>
         <td>R$ {{ "%.2f"|format(p['preco_varejo']) }}</td>
@@ -49,7 +52,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5">Nenhum produto encontrado.</td></tr>
+      <tr><td colspan="6">Nenhum produto encontrado.</td></tr>
       {% endfor %}
     </tbody>
   </table>

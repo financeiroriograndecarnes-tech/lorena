@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from ..db import get_db
+from ..db import get_db, hoje_brasil
 
 bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 
@@ -32,11 +32,21 @@ def _saldo_devedor(db, cliente_id):
     return row["saldo"] or 0
 
 
+def gasto_hoje(db, cliente_id):
+    """Total ja gasto hoje (vendas concluidas) por esse cliente."""
+    row = db.execute(
+        """SELECT COALESCE(SUM(total_liquido), 0) AS total FROM vendas
+           WHERE cliente_id = ? AND status = 'Concluida' AND data_hora::date = ?::date""",
+        (cliente_id, hoje_brasil().isoformat()),
+    ).fetchone()
+    return row["total"] or 0
+
+
 @bp.route("/novo", methods=["GET", "POST"])
 def novo():
     if request.method == "POST":
         return _salvar(None)
-    return render_template("clientes/form.html", active="clientes", cliente=None, saldo=0)
+    return render_template("clientes/form.html", active="clientes", cliente=None, saldo=0, gasto=0)
 
 
 @bp.route("/<int:cliente_id>/editar", methods=["GET", "POST"])
@@ -49,7 +59,8 @@ def editar(cliente_id):
     if request.method == "POST":
         return _salvar(cliente_id)
     saldo = _saldo_devedor(db, cliente_id)
-    return render_template("clientes/form.html", active="clientes", cliente=cliente, saldo=saldo)
+    gasto = gasto_hoje(db, cliente_id)
+    return render_template("clientes/form.html", active="clientes", cliente=cliente, saldo=saldo, gasto=gasto)
 
 
 def _salvar(cliente_id):
@@ -66,6 +77,8 @@ def _salvar(cliente_id):
     telefone = request.form.get("telefone", "").strip()
     celular = request.form.get("celular", "").strip()
     limite = float(request.form.get("limite_credito") or 0)
+    limite_diario = float(request.form.get("limite_diario") or 0)
+    alergia = request.form.get("alergia", "").strip()
     status = request.form.get("status", "Ativo")
     permite_a_prazo = request.form.get("permite_a_prazo", "Nao")
     turma = request.form.get("turma", "").strip()
@@ -74,19 +87,20 @@ def _salvar(cliente_id):
         db.execute(
             """INSERT INTO clientes
                (nome, responsavel, tutor, telefone, celular, limite_credito,
-                status, permite_a_prazo, turma)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                status, permite_a_prazo, turma, limite_diario, alergia)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (nome, responsavel, tutor, telefone, celular, limite,
-             status, permite_a_prazo, turma),
+             status, permite_a_prazo, turma, limite_diario, alergia),
         )
         flash("Cliente cadastrado com sucesso.", "sucesso")
     else:
         db.execute(
             """UPDATE clientes SET nome=?, responsavel=?, tutor=?, telefone=?,
-               celular=?, limite_credito=?, status=?, permite_a_prazo=?, turma=?
+               celular=?, limite_credito=?, status=?, permite_a_prazo=?, turma=?,
+               limite_diario=?, alergia=?
                WHERE id=?""",
             (nome, responsavel, tutor, telefone, celular, limite,
-             status, permite_a_prazo, turma, cliente_id),
+             status, permite_a_prazo, turma, limite_diario, alergia, cliente_id),
         )
         flash("Cliente atualizado com sucesso.", "sucesso")
     db.commit()
@@ -115,10 +129,30 @@ def buscar_json():
         return {"resultados": []}
     like = f"%{termo}%"
     rows = db.execute(
-        """SELECT id, nome, responsavel, turma, celular FROM clientes
+        """SELECT id, nome, responsavel, turma, celular, limite_diario, alergia FROM clientes
            WHERE CAST(id AS TEXT) = ? OR nome LIKE ? OR responsavel LIKE ?
               OR turma LIKE ? OR celular LIKE ?
            ORDER BY nome LIMIT 20""",
         (termo, like, like, like, like),
     ).fetchall()
     return {"resultados": [dict(r) for r in rows]}
+
+
+@bp.route("/<int:cliente_id>/status.json")
+def status_json(cliente_id):
+    """Usado pelo PDV: alergia + situacao do limite diario do cliente selecionado."""
+    db = get_db()
+    cliente = db.execute(
+        "SELECT id, nome, limite_diario, alergia FROM clientes WHERE id = ?", (cliente_id,)
+    ).fetchone()
+    if cliente is None:
+        return {"encontrado": False}
+    gasto = gasto_hoje(db, cliente_id)
+    limite = cliente["limite_diario"] or 0
+    return {
+        "encontrado": True,
+        "alergia": cliente["alergia"] or "",
+        "limite_diario": limite,
+        "gasto_hoje": gasto,
+        "disponivel_hoje": (limite - gasto) if limite > 0 else None,
+    }

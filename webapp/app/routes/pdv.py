@@ -99,6 +99,10 @@ def finalizar():
             erro = _validar_venda_a_prazo(db, cliente_id, valor_prazo)
             if erro:
                 return jsonify({"ok": False, "erro": erro}), 400
+        if cliente_id:
+            erro = _validar_limite_diario(db, cliente_id, total)
+            if erro:
+                return jsonify({"ok": False, "erro": erro}), 400
 
     cur = db.execute(
         """INSERT INTO vendas (cliente_id, cliente_nome, vendedor, total_bruto, desconto,
@@ -165,6 +169,27 @@ def _validar_venda_a_prazo(db, cliente_id, valor):
     disponivel = cliente["limite_credito"] - saldo
     if valor > disponivel:
         return f"Limite insuficiente. Disponivel: R$ {disponivel:.2f} | Necessario: R$ {valor:.2f}"
+    return None
+
+
+def _validar_limite_diario(db, cliente_id, valor_venda):
+    """Bloqueia se a soma do que o cliente ja comprou hoje + esta venda
+    passar do teto de gasto diario cadastrado (0 = sem limite)."""
+    from .clientes import gasto_hoje
+
+    cliente = db.execute(
+        "SELECT limite_diario FROM clientes WHERE id = ?", (cliente_id,)
+    ).fetchone()
+    if cliente is None:
+        return None
+    limite = cliente["limite_diario"] or 0
+    if limite <= 0:
+        return None
+    gasto = gasto_hoje(db, cliente_id)
+    if gasto + valor_venda > limite + 0.009:
+        disponivel = max(0, limite - gasto)
+        return (f"Limite de gasto diario excedido. Ja gasto hoje: R$ {gasto:.2f} | "
+                f"Limite: R$ {limite:.2f} | Disponivel: R$ {disponivel:.2f}")
     return None
 
 
